@@ -12,8 +12,8 @@ export interface ParsedRow {
 }
 
 export const CSV_COLUMNS = [
-  { key: 'name', label: 'name', required: true, example: 'Ayesha Khan' },
-  { key: 'email', label: 'email', required: true, example: 'ayesha@example.com' },
+  { key: 'name', label: 'name', required: true, example: 'Emily Clarke' },
+  { key: 'email', label: 'email', required: true, example: 'emily@example.com' },
   { key: 'phone', label: 'phone', required: false, example: '+92 300 1234567' },
   { key: 'company', label: 'company', required: false, example: 'Nimbus Tech' },
   { key: 'designation', label: 'designation', required: false, example: 'Product Manager' },
@@ -101,8 +101,8 @@ export const buildSampleCsv = (): string =>
     fields: CSV_COLUMNS.map((c) => c.label),
     data: [
       CSV_COLUMNS.map((c) => c.example),
-      ['Bilal Ahmed', 'bilal@example.com', '+92 321 7654321', 'Orbit Media', 'Editor', 'Karachi', 'Media'],
-      ['Sara Malik', 'sara@example.com', '+92 333 1112233', 'Vertex Labs', 'CTO', 'Islamabad', 'Speaker'],
+      ['James Wilson', 'james@example.com', '+92 321 7654321', 'Orbit Media', 'Editor', 'Karachi', 'Media'],
+      ['Sophie Taylor', 'sophie@example.com', '+92 333 1112233', 'Vertex Labs', 'CTO', 'Islamabad', 'Speaker'],
     ],
   });
 

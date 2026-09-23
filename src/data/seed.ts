@@ -19,8 +19,8 @@ const mulberry32 = (seed: number) => () => {
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 };
 
-const FIRST = ['Ayesha', 'Bilal', 'Sara', 'Hamza', 'Zainab', 'Omar', 'Hira', 'Usman', 'Mariam', 'Ali', 'Fatima', 'Danish', 'Noor', 'Saad', 'Iqra', 'Faisal', 'Amna', 'Hassan', 'Mehwish', 'Imran', 'Sana', 'Kamran', 'Rabia', 'Adeel'];
-const LAST = ['Khan', 'Ahmed', 'Malik', 'Siddiqui', 'Qureshi', 'Sheikh', 'Butt', 'Chaudhry', 'Raza', 'Hussain', 'Iqbal', 'Mirza', 'Javed', 'Aslam'];
+const FIRST = ['Emily', 'James', 'Sophie', 'Oliver', 'Charlotte', 'Jack', 'Hannah', 'Thomas', 'Lucy', 'Harry', 'Grace', 'George', 'Chloe', 'William', 'Amelia', 'Daniel', 'Olivia', 'Henry', 'Jessica', 'Samuel', 'Emma', 'Edward', 'Rebecca', 'Matthew'];
+const LAST = ['Smith', 'Johnson', 'Williams', 'Brown', 'Taylor', 'Wilson', 'Davies', 'Evans', 'Thompson', 'Walker', 'Wright', 'Robinson', 'Clarke', 'Harris'];
 const COMPANIES = ['Nimbus Tech', 'Orbit Media', 'Vertex Labs', 'Crescent Bank', 'Indus Motors', 'Skyline Realty', 'Blue Pine Hotels', 'Zenith Pharma', 'Atlas Consulting', 'Falcon Logistics'];
 const DESIGNATIONS = ['CEO', 'Product Manager', 'Marketing Lead', 'Software Engineer', 'Director', 'Editor', 'Consultant', 'HR Manager', 'CTO', 'Founder', 'Sales Head'];
 const CITIES = ['Lahore', 'Karachi', 'Islamabad', 'Rawalpindi', 'Faisalabad', 'Multan', 'Peshawar'];
@@ -50,9 +50,9 @@ const SEED_EVENTS: SeedEvent[] = [
     checkInRatio: 0,
   },
   {
-    title: 'Ahmed & Fatima Wedding Reception',
+    title: 'James & Emily Wedding Reception',
     category: 'Wedding',
-    description: 'Walima reception with dinner and live qawwali.',
+    description: 'Evening wedding reception with dinner and a live band.',
     venue: 'Pearl Continental',
     city: 'Karachi',
     date: '2026-11-07',
