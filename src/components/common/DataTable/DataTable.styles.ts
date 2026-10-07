@@ -7,13 +7,11 @@ export const Scroll = styled.div`
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
-
-  /* Thin, unobtrusive scrollbar so wide tables still feel polished */
   scrollbar-width: thin;
   scrollbar-color: ${({ theme }) => `${theme.colors.borderStrong} transparent`};
 
   &::-webkit-scrollbar {
-    height: 8px;
+    height: 6px;
   }
 
   &::-webkit-scrollbar-thumb {
@@ -37,14 +35,15 @@ const stickyRight = css`
   position: sticky;
   right: 0;
   z-index: 2;
-  box-shadow: -10px 0 16px -12px rgba(15, 27, 45, 0.28);
+  background: ${({ theme }) => theme.colors.surface};
+  box-shadow: inset 1px 0 0 ${({ theme }) => theme.colors.border};
 `;
 
 export const Th = styled.th<{ $align?: string; $stickyRight?: boolean; $wrap?: boolean }>`
-  height: 44px;
-  padding: 0 14px;
+  height: 36px;
+  padding: 0 10px;
   text-align: ${({ $align = 'left' }) => $align};
-  font-size: ${({ theme }) => theme.fontSizes.xs};
+  font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -58,17 +57,17 @@ export const Th = styled.th<{ $align?: string; $stickyRight?: boolean; $wrap?: b
 `;
 
 export const Td = styled.td<{ $align?: string; $stickyRight?: boolean; $wrap?: boolean }>`
-  height: 56px;
-  padding: 12px 14px;
+  height: 44px;
+  padding: 6px 10px;
   text-align: ${({ $align = 'left' }) => $align};
-  font-size: ${({ theme }) => theme.fontSizes.md};
+  font-size: ${({ theme }) => theme.fontSizes.sm};
   color: ${({ theme }) => theme.colors.text};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surface};
   white-space: ${({ $wrap }) => ($wrap ? 'normal' : 'nowrap')};
   vertical-align: middle;
-  max-width: ${({ $wrap }) => ($wrap ? '280px' : 'none')};
-  line-height: 1.4;
+  max-width: ${({ $wrap }) => ($wrap ? '220px' : 'none')};
+  line-height: 1.35;
   ${({ $stickyRight }) => $stickyRight && stickyRight}
 `;
 
@@ -96,23 +95,23 @@ export const Tr = styled.tr<{ $clickable: boolean; $selected: boolean }>`
 export const HeaderButton = styled.button<{ $active: boolean }>`
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   font: inherit;
   letter-spacing: inherit;
   text-transform: inherit;
   color: ${({ theme, $active }) => ($active ? theme.colors.text : 'inherit')};
 
   svg {
-    width: 13px;
-    height: 13px;
+    width: 12px;
+    height: 12px;
     flex-shrink: 0;
-    opacity: ${({ $active }) => ($active ? 1 : 0.5)};
+    opacity: ${({ $active }) => ($active ? 1 : 0.45)};
   }
 `;
 
 export const Checkbox = styled.input`
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   cursor: pointer;
   accent-color: ${({ theme }) => theme.colors.primary};
 `;
@@ -123,14 +122,14 @@ export const Footer = styled.div`
   justify-content: space-between;
   flex-wrap: wrap;
   gap: ${({ theme }) => theme.spacing.sm};
-  padding: ${({ theme }) => `${theme.spacing.md} ${theme.spacing.lg}`};
+  padding: 10px 14px;
   border-top: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surface};
 
   @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
     flex-direction: column;
     align-items: stretch;
-    gap: ${({ theme }) => theme.spacing.md};
+    gap: ${({ theme }) => theme.spacing.sm};
   }
 `;
 
@@ -139,7 +138,7 @@ export const PageInfo = styled.div`
   align-items: center;
   flex-wrap: wrap;
   gap: 4px 8px;
-  font-size: ${({ theme }) => theme.fontSizes.sm};
+  font-size: ${({ theme }) => theme.fontSizes.xs};
   color: ${({ theme }) => theme.colors.textMuted};
 
   strong {
@@ -154,12 +153,12 @@ export const PageInfo = styled.div`
 
 export const PageSizeSelect = styled.select`
   margin-left: 8px;
-  height: 32px;
-  padding: 0 10px;
+  height: 28px;
+  padding: 0 8px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: ${({ theme }) => theme.radii.sm};
   background: ${({ theme }) => theme.colors.surface};
-  font-size: ${({ theme }) => theme.fontSizes.sm};
+  font-size: ${({ theme }) => theme.fontSizes.xs};
   color: ${({ theme }) => theme.colors.text};
   cursor: pointer;
 
@@ -172,7 +171,7 @@ export const PageControls = styled.div`
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 4px;
+  gap: 3px;
 
   @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
     justify-content: center;
@@ -182,11 +181,11 @@ export const PageControls = styled.div`
 export const PageButton = styled.button<{ $active?: boolean }>`
   display: grid;
   place-items: center;
-  min-width: 32px;
-  height: 32px;
-  padding: 0 8px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
   border-radius: ${({ theme }) => theme.radii.sm};
-  font-size: ${({ theme }) => theme.fontSizes.sm};
+  font-size: ${({ theme }) => theme.fontSizes.xs};
   font-weight: 600;
   border: 1px solid ${({ theme, $active }) => ($active ? theme.colors.primary : theme.colors.border)};
   background: ${({ theme, $active }) => ($active ? theme.colors.primary : theme.colors.surface)};
@@ -202,7 +201,7 @@ export const PageButton = styled.button<{ $active?: boolean }>`
   }
 
   svg {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
   }
 `;

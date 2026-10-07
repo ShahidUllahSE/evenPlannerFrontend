@@ -8,11 +8,13 @@ export const ROUTES = {
   /** Guests across every event. */
   USERS: '/users',
   COMPOSE: '/compose',
+  /** Twilio SMS invitations. */
+  COMPOSE_SMS: '/compose-sms',
   /** Login accounts: planners and scanners. */
   TEAM: '/team',
   /** Admin-only SMTP account override. */
   EMAIL_SETTINGS: '/settings/email',
-  /** Admin-only Twilio credentials override. */
+  /** Admin-only Twilio SMS credentials override. */
   TWILIO_SETTINGS: '/settings/twilio',
   SCAN: '/scan',
   SCAN_HISTORY: '/scans',

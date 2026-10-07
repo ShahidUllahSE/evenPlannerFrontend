@@ -18,6 +18,8 @@ import {
   FormPanel,
   Headline,
   IconInput,
+  MobileBrand,
+  MobileTagline,
   Page,
   PasswordToggle,
   Quote,
@@ -66,6 +68,13 @@ const Login = () => {
 
   return (
     <Page>
+      <MobileBrand>
+        <Logo light tagline="Event Management" />
+        <MobileTagline>
+          <strong>Plan, invite and check in guests</strong> — sign in to continue.
+        </MobileTagline>
+      </MobileBrand>
+
       <BrandPanel>
         <Logo light tagline="Event Management" />
         <div>
@@ -89,7 +98,7 @@ const Login = () => {
 
       <FormPanel>
         <FormCard onSubmit={submit} noValidate>
-          <h2>Welcome back 👋</h2>
+          <h2>Welcome back</h2>
           <p>Sign in with the account your administrator or event planner gave you.</p>
 
           {error && <ErrorBox role="alert">{error}</ErrorBox>}

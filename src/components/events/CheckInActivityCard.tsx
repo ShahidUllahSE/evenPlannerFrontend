@@ -128,7 +128,7 @@ const CheckInActivityCard = ({ eventId, onRefresh }: CheckInActivityCardProps) =
           rows={recent}
           rowKey={(s) => s.id}
           minWidth="560px"
-          pageSize={15}
+          pageSize={25}
           empty={{ title: 'No scans yet' }}
         />
       </Card>

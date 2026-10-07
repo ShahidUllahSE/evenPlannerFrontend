@@ -70,8 +70,8 @@ function DataTable<T>({
   selectedIds = [],
   onSelectionChange,
   onRowClick,
-  pageSize: initialPageSize = 10,
-  minWidth = '880px',
+  pageSize: initialPageSize = 25,
+  minWidth = '720px',
   empty,
 }: DataTableProps<T>) {
   const [sort, setSort] = useState<SortState>(null);
@@ -227,7 +227,7 @@ function DataTable<T>({
             }}
             aria-label="Rows per page"
           >
-            {[10, 25, 50].map((n) => (
+            {[10, 25, 50, 100].map((n) => (
               <option key={n} value={n}>
                 {n} / page
               </option>

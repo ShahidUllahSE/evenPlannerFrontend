@@ -27,6 +27,17 @@ export interface SendEmailResult {
   failed: { inviteeId: string; email: string; error: string }[];
 }
 
+export interface SendSmsInput {
+  inviteeIds: string[];
+  message: string;
+  includeQr: boolean;
+}
+
+export interface SendSmsResult {
+  sent: number;
+  failed: { inviteeId: string; phone: string; error: string }[];
+}
+
 interface DataContextValue {
   events: EventItem[];
   invitees: Invitee[];
@@ -48,6 +59,7 @@ interface DataContextValue {
   deleteInvitees: (ids: string[]) => Promise<number>;
   regenerateQrCodes: (eventId: string, qrType: QrType) => Promise<number>;
   sendEmails: (eventId: string, input: SendEmailInput) => Promise<SendEmailResult>;
+  sendSms: (eventId: string, input: SendSmsInput) => Promise<SendSmsResult>;
   /** Re-fetches one event's guests, e.g. after check-ins at the door. */
   refreshEventInvitees: (eventId: string) => Promise<void>;
 
@@ -201,6 +213,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     [refreshEventInvitees],
   );
 
+  const sendSms = useCallback(async (eventId: string, input: SendSmsInput) => {
+    const res = await api.post<SendSmsResult>(`/events/${eventId}/sms`, input);
+    return { sent: res.sent, failed: res.failed };
+  }, []);
+
   // Accounts
 
   const createUser = useCallback(async (input: UserInput) => {
@@ -243,6 +260,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       deleteInvitees,
       regenerateQrCodes,
       sendEmails,
+      sendSms,
       refreshEventInvitees,
       createUser,
       updateUser,
@@ -263,6 +281,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       deleteInvitees,
       regenerateQrCodes,
       sendEmails,
+      sendSms,
       refreshEventInvitees,
       createUser,
       updateUser,

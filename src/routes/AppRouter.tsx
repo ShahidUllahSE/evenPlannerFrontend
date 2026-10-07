@@ -14,6 +14,7 @@ const Events = lazy(() => import('@/pages/Events'));
 const EventDetails = lazy(() => import('@/pages/EventDetails'));
 const AllUsers = lazy(() => import('@/pages/AllUsers'));
 const ComposeEmail = lazy(() => import('@/pages/ComposeEmail'));
+const ComposeSms = lazy(() => import('@/pages/ComposeSms'));
 const Team = lazy(() => import('@/pages/Team'));
 const EmailSettings = lazy(() => import('@/pages/EmailSettings'));
 const TwilioSettings = lazy(() => import('@/pages/TwilioSettings'));
@@ -49,6 +50,7 @@ const AppRouter = () => (
           <Route path={ROUTES.EVENT_DETAILS} element={only(MANAGERS, <EventDetails />)} />
           <Route path={ROUTES.USERS} element={only(MANAGERS, <AllUsers />)} />
           <Route path={ROUTES.COMPOSE} element={only(MANAGERS, <ComposeEmail />)} />
+          <Route path={ROUTES.COMPOSE_SMS} element={only(MANAGERS, <ComposeSms />)} />
           <Route path={ROUTES.TEAM} element={only(MANAGERS, <Team />)} />
           <Route path={ROUTES.EMAIL_SETTINGS} element={only(ADMINS, <EmailSettings />)} />
           <Route path={ROUTES.TWILIO_SETTINGS} element={only(ADMINS, <TwilioSettings />)} />

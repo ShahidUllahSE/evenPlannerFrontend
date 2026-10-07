@@ -73,7 +73,7 @@ const TwilioSettings = () => {
       setAccountSid(next.accountSid);
       setFromNumber(next.fromNumber);
       setAuthToken('');
-      toast.success('Twilio settings saved. SMS will use these credentials.');
+      toast.success('Twilio SMS settings saved.');
     } catch (err) {
       toast.error(errorMessage(err));
     } finally {
@@ -100,7 +100,7 @@ const TwilioSettings = () => {
     <>
       <PageHeader
         title="Twilio Settings"
-        subtitle="Set the Twilio Account SID, auth token, and sender number. Leave unset to use the server .env defaults."
+        subtitle="Twilio Messages API for invitation SMS/MMS (QR images). Not voice or WhatsApp. Leave unset to use .env defaults."
       />
 
       <Card>
@@ -200,9 +200,9 @@ const TwilioSettings = () => {
             </form>
 
             <Hint style={{ marginTop: 16 }}>
-              <Phone size={14} /> Credentials are stored encrypted. When both panel SID, token, and from number are
-              set, they override <code>TWILIO_ACCOUNT_SID</code>, <code>TWILIO_AUTH_TOKEN</code>, and{' '}
-              <code>TWILIO_FROM_NUMBER</code> from the server environment.
+              <Phone size={14} /> SMS sending only via Twilio Messages. Set server{' '}
+              <code>TWILIO_TRANSPORT=sms</code> (not <code>log</code>) to deliver for real. Panel SID, token, and
+              from-number override the matching <code>TWILIO_*</code> env values when all three are saved.
             </Hint>
           </>
         )}

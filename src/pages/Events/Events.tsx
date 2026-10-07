@@ -66,7 +66,9 @@ const Events = () => {
       .filter(
         (e) =>
           !q ||
-          [e.title, e.address, e.organizer, e.createdBy?.name ?? ''].some((field) => field.toLowerCase().includes(q)),
+          [e.title, e.address, e.organizer, e.createdBy?.name ?? ''].some((field) =>
+            field.toLowerCase().includes(q),
+          ),
       )
       .map((e) => {
         const c = counts.get(e.id);
@@ -91,14 +93,14 @@ const Events = () => {
       sortValue: (e) => e.title,
       render: (e) => (
         <Stack>
-          <strong>{e.title}</strong>
+          <strong title={e.title}>{e.title}</strong>
           <span>{e.category}</span>
         </Stack>
       ),
     },
     {
       key: 'date',
-      header: 'Date & Time',
+      header: 'When',
       sortValue: (e) => e.date,
       render: (e) => (
         <Stack>
@@ -112,17 +114,8 @@ const Events = () => {
     {
       key: 'address',
       header: 'Address',
-      wrap: true,
-      width: '200px',
       sortValue: (e) => e.address,
-      render: (e) => (e.address ? <Clamp title={e.address}>{e.address}</Clamp> : '—'),
-    },
-    {
-      key: 'organizer',
-      header: 'Organizer',
-      wrap: true,
-      sortValue: (e) => e.organizer,
-      render: (e) => (e.organizer ? <Clamp title={e.organizer}>{e.organizer}</Clamp> : '—'),
+      render: (e) => (e.address ? <Clamp title={e.address}>{e.address}</Clamp> : <Muted>—</Muted>),
     },
     ...(isAdmin
       ? [
@@ -133,37 +126,41 @@ const Events = () => {
             render: (e: EventRow) => <Muted>{e.createdBy?.name ?? '—'}</Muted>,
           },
         ]
-      : []),
+      : [
+          {
+            key: 'organizer',
+            header: 'Organizer',
+            sortValue: (e: EventRow) => e.organizer,
+            render: (e: EventRow) =>
+              e.organizer ? <Clamp title={e.organizer}>{e.organizer}</Clamp> : <Muted>—</Muted>,
+          },
+        ]),
     {
       key: 'invitees',
-      header: 'Guests / Capacity',
+      header: 'Guests',
       sortValue: (e) => e.inviteeCount,
       render: (e) => <Meter value={e.inviteeCount} max={e.capacity} />,
     },
     {
       key: 'sent',
-      header: 'Invites Sent',
-      align: 'center',
+      header: 'Sent',
       sortValue: (e) => e.sentCount,
       render: (e) => (
-        <strong>
-          {e.sentCount}
-          <Muted> / {e.inviteeCount}</Muted>
-        </strong>
+        <span>
+          <strong>{e.sentCount}</strong>
+          <Muted>/{e.inviteeCount}</Muted>
+        </span>
       ),
     },
     {
-      key: 'accepted',
-      header: 'Accepted',
-      align: 'center',
-      sortValue: (e) => e.acceptedCount,
-      render: (e) => e.acceptedCount,
-    },
-    {
       key: 'qr',
-      header: 'QR Type',
+      header: 'QR',
       render: (e) =>
-        e.qrType ? <Badge tone="primary">{QR_TYPES[e.qrType].label}</Badge> : <Muted>Not set</Muted>,
+        e.qrType ? (
+          <Badge tone="primary">{QR_TYPES[e.qrType].label}</Badge>
+        ) : (
+          <Muted>—</Muted>
+        ),
     },
     {
       key: 'status',
@@ -173,9 +170,9 @@ const Events = () => {
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: '',
       align: 'right',
-      stickyRight: true,
+      width: '96px',
       render: (e) => (
         <Actions onClick={(ev) => ev.stopPropagation()}>
           <IconAction onClick={() => navigate(eventDetailsPath(e.id))} title="View" aria-label="View event">
@@ -205,7 +202,7 @@ const Events = () => {
         title="Events"
         subtitle={isAdmin ? 'Every event, across all planners.' : 'Create and manage your events in one place.'}
         actions={
-          <Button onClick={openCreate}>
+          <Button size="sm" onClick={openCreate}>
             <Plus /> Create Event
           </Button>
         }
@@ -239,7 +236,8 @@ const Events = () => {
           rows={rows}
           rowKey={(e) => e.id}
           onRowClick={(e) => navigate(eventDetailsPath(e.id))}
-          minWidth={isAdmin ? '1180px' : '1080px'}
+          pageSize={25}
+          minWidth={isAdmin ? '980px' : '920px'}
           empty={
             events.length === 0 && !loading
               ? {
@@ -247,7 +245,7 @@ const Events = () => {
                   title: 'No events yet',
                   description: 'Create your first event to start inviting guests.',
                   action: (
-                    <Button onClick={openCreate}>
+                    <Button size="sm" onClick={openCreate}>
                       <Plus /> Create Event
                     </Button>
                   ),

@@ -4,9 +4,11 @@ export const Page = styled.div`
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
   min-height: 100vh;
+  min-height: 100dvh;
 
   @media (max-width: ${({ theme }) => theme.breakpoints.desktop}) {
     grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
   }
 `;
 
@@ -24,7 +26,6 @@ export const BrandPanel = styled.aside`
     radial-gradient(circle at 10% 90%, rgba(20, 163, 161, 0.35), transparent 45%),
     linear-gradient(160deg, #0f1b2d 0%, #13263f 55%, #0c3b44 100%);
 
-  /* subtle dotted pattern */
   &::after {
     content: '';
     position: absolute;
@@ -41,6 +42,35 @@ export const BrandPanel = styled.aside`
 
   @media (max-width: ${({ theme }) => theme.breakpoints.desktop}) {
     display: none;
+  }
+`;
+
+/** Compact brand strip for phones/tablets — replaces the hidden BrandPanel. */
+export const MobileBrand = styled.header`
+  display: none;
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px 20px 22px;
+    padding-top: max(20px, env(safe-area-inset-top));
+    color: #fff;
+    background:
+      radial-gradient(circle at 90% 0%, rgba(212, 164, 55, 0.25), transparent 42%),
+      linear-gradient(160deg, #0f1b2d 0%, #0c3b44 100%);
+  }
+`;
+
+export const MobileTagline = styled.p`
+  max-width: 280px;
+  font-size: ${({ theme }) => theme.fontSizes.sm};
+  line-height: 1.45;
+  color: ${({ theme }) => theme.colors.sidebarText};
+
+  strong {
+    color: #fff;
+    font-weight: 600;
   }
 `;
 
@@ -105,13 +135,19 @@ export const FormPanel = styled.main`
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: ${({ theme }) => `${theme.spacing.xxl} ${theme.spacing.md}`};
+  padding: ${({ theme }) => `${theme.spacing.xxl} ${theme.spacing.lg}`};
   background: ${({ theme }) => theme.colors.background};
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    align-items: flex-start;
+    padding: 20px 16px 28px;
+    padding-bottom: max(28px, env(safe-area-inset-bottom));
+  }
 `;
 
 export const FormCard = styled.form`
   width: 100%;
-  max-width: 420px;
+  max-width: 400px;
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing.md};
@@ -124,8 +160,29 @@ export const FormCard = styled.form`
 
   > p {
     color: ${({ theme }) => theme.colors.textMuted};
-    margin-top: -8px;
-    margin-bottom: ${({ theme }) => theme.spacing.sm};
+    margin-top: -6px;
+    margin-bottom: 4px;
+    font-size: ${({ theme }) => theme.fontSizes.md};
+    line-height: 1.45;
+  }
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    max-width: 440px;
+    padding: 22px 18px;
+    background: ${({ theme }) => theme.colors.surface};
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    border-radius: ${({ theme }) => theme.radii.lg};
+    box-shadow: ${({ theme }) => theme.shadows.md};
+    gap: 14px;
+
+    h2 {
+      font-size: 1.35rem;
+    }
+
+    > p {
+      font-size: ${({ theme }) => theme.fontSizes.sm};
+      margin-bottom: 2px;
+    }
   }
 `;
 
@@ -159,6 +216,15 @@ export const IconInput = styled.div`
     padding-left: 42px;
     padding-right: 44px;
     background: ${({ theme }) => theme.colors.surface};
+    /* Prevents iOS Safari from zooming the page on focus */
+    font-size: 16px;
+  }
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    input {
+      height: 48px;
+      background: ${({ theme }) => theme.colors.surfaceAlt};
+    }
   }
 `;
 
@@ -169,8 +235,8 @@ export const PasswordToggle = styled.button`
   transform: translateY(-50%);
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   border-radius: ${({ theme }) => theme.radii.sm};
   color: ${({ theme }) => theme.colors.textMuted};
 
@@ -188,6 +254,7 @@ export const RememberRow = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  min-height: 28px;
 
   label {
     display: flex;
@@ -196,6 +263,7 @@ export const RememberRow = styled.div`
     font-size: ${({ theme }) => theme.fontSizes.sm};
     color: ${({ theme }) => theme.colors.textMuted};
     cursor: pointer;
+    user-select: none;
   }
 
   input {
@@ -212,4 +280,5 @@ export const ErrorBox = styled.div`
   color: ${({ theme }) => theme.colors.danger};
   font-size: ${({ theme }) => theme.fontSizes.sm};
   font-weight: 500;
+  line-height: 1.4;
 `;

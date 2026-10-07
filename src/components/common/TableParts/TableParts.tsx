@@ -80,26 +80,24 @@ export const Muted = styled.span`
   color: ${({ theme }) => theme.colors.textMuted};
 `;
 
-/** Long text that wraps up to 2 lines inside table cells. */
+/** Long text truncated to one line inside dense table cells. */
 export const Clamp = styled.span`
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  display: block;
+  max-width: 180px;
   overflow: hidden;
-  white-space: normal;
-  line-height: 1.35;
-  max-width: 260px;
-  word-break: break-word;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 export const Stack = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
-  max-width: 260px;
+  max-width: 220px;
 
   strong {
+    font-size: ${({ theme }) => theme.fontSizes.sm};
     font-weight: 600;
     color: ${({ theme }) => theme.colors.text};
     overflow: hidden;
@@ -108,7 +106,7 @@ export const Stack = styled.div`
   }
 
   span {
-    font-size: ${({ theme }) => theme.fontSizes.sm};
+    font-size: 0.6875rem;
     color: ${({ theme }) => theme.colors.textMuted};
     overflow: hidden;
     text-overflow: ellipsis;
@@ -119,15 +117,16 @@ export const Stack = styled.div`
 export const Actions = styled.div`
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  justify-content: flex-end;
+  gap: 0;
   flex-shrink: 0;
 `;
 
 export const IconAction = styled.button<{ $danger?: boolean }>`
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: ${({ theme }) => theme.radii.sm};
   color: ${({ theme }) => theme.colors.textMuted};
 
@@ -137,8 +136,8 @@ export const IconAction = styled.button<{ $danger?: boolean }>`
   }
 
   svg {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
   }
 `;
 
@@ -180,9 +179,9 @@ export const PersonCell = ({ name, email }: { name: string; email: string }) => 
 
 const Track = styled.div`
   width: 100%;
-  min-width: 72px;
-  max-width: 140px;
-  height: 6px;
+  min-width: 64px;
+  max-width: 110px;
+  height: 4px;
   border-radius: 999px;
   background: ${({ theme }) => theme.colors.neutralSoft};
   overflow: hidden;
@@ -198,13 +197,14 @@ const Fill = styled.div<{ $pct: number }>`
 const MeterWrap = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  min-width: 100px;
-  max-width: 140px;
+  gap: 4px;
+  min-width: 72px;
+  max-width: 110px;
 
   span {
-    font-size: ${({ theme }) => theme.fontSizes.sm};
+    font-size: 0.75rem;
     color: ${({ theme }) => theme.colors.textMuted};
+    line-height: 1.2;
   }
 
   && strong {

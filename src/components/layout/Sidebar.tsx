@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   LogOut,
   Mail,
+  MessageSquare,
   Phone,
   ScanLine,
   Settings,
@@ -164,6 +165,7 @@ const MANAGER_MENU = [
   { to: ROUTES.EVENTS, label: 'Events', icon: CalendarDays },
   { to: ROUTES.USERS, label: 'All Guests', icon: Users },
   { to: ROUTES.COMPOSE, label: 'Send Email', icon: Mail },
+  { to: ROUTES.COMPOSE_SMS, label: 'Send SMS', icon: MessageSquare },
 ];
 
 const EVENT_DAY_MENU = [
