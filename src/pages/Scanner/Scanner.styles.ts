@@ -33,7 +33,9 @@ export const Viewport = styled.div`
   video {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    /* contain keeps the full frame visible so aim matches what ZXing decodes */
+    object-fit: contain;
+    background: #000;
     display: block;
   }
 

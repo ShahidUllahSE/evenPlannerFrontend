@@ -252,7 +252,7 @@ const Scanner = () => {
                 {cameraState === 'error' ? <CameraOffIcon /> : <Camera />}
                 <p>
                   {cameraError ||
-                    'Point the camera at the QR code. Hold steady 15–20 cm away — use HTTPS on mobile for best results.'}
+                    'Select an event, then point at the QR. Hold steady. On phones use https://event.gwbdemo.xyz — or type the ticket code below.'}
                 </p>
                 <Button onClick={startCamera} loading={cameraState === 'starting'} disabled={!event}>
                   <Camera /> {cameraState === 'error' ? 'Try again' : 'Start camera'}
