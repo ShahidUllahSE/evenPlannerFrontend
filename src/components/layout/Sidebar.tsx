@@ -37,10 +37,9 @@ const Aside = styled.aside<{ $open: boolean }>`
 `;
 
 const Brand = styled.div`
-  height: ${({ theme }) => theme.layout.topbarHeight};
   display: flex;
   align-items: center;
-  padding: 0 ${({ theme }) => theme.spacing.lg};
+  padding: 18px 14px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 `;
 

@@ -69,14 +69,14 @@ const Login = () => {
   return (
     <Page>
       <MobileBrand>
-        <Logo light tagline="Event Management" />
+        <Logo light size="lg" tagline="Event Management" />
         <MobileTagline>
           <strong>Plan, invite and check in guests</strong> — sign in to continue.
         </MobileTagline>
       </MobileBrand>
 
       <BrandPanel>
-        <Logo light tagline="Event Management" />
+        <Logo light size="lg" tagline="Event Management" />
         <div>
           <Headline>
             Plan, invite and welcome your guests <span>effortlessly.</span>
