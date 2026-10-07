@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Eye, Mail, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
@@ -29,6 +29,7 @@ import { renderQrDataUrl } from '@/utils/qr';
 import {
   CountPill,
   Layout,
+  PreviewCard,
   PreviewFrame,
   PreviewMeta,
   ProgressBar,
@@ -49,17 +50,38 @@ const SAMPLE_GUEST: Pick<Invitee, 'name' | 'email' | 'company' | 'designation' |
 };
 
 const buildVars = (event: EventItem, guest: typeof SAMPLE_GUEST): TemplateVars => ({
-  name: guest.name,
-  email: guest.email,
-  company: guest.company,
-  designation: guest.designation,
-  ticketCode: guest.ticketCode,
-  eventTitle: event.title,
+  name: guest.name ?? '',
+  email: guest.email ?? '',
+  company: guest.company ?? '',
+  designation: guest.designation ?? '',
+  ticketCode: guest.ticketCode ?? '',
+  eventTitle: event.title ?? '',
   eventDate: formatDate(event.date),
   eventTime: `${formatTime(event.startTime)} – ${formatTime(event.endTime)}`,
-  address: event.address,
-  organizer: event.organizer,
+  address: event.address ?? '',
+  organizer: event.organizer ?? '',
 });
+
+/** Load HTML via blob URL — more reliable than srcDoc inside sticky/overflow layouts. */
+const useEmailPreviewFrame = (html: string) => {
+  const frameRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    const iframe = frameRef.current;
+    if (!iframe) return;
+    const blob = new Blob([html || '<!doctype html><html><body></body></html>'], {
+      type: 'text/html;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    iframe.src = url;
+    return () => {
+      URL.revokeObjectURL(url);
+      iframe.removeAttribute('src');
+    };
+  }, [html]);
+
+  return frameRef;
+};
 
 const ComposeEmail = () => {
   useDocumentTitle('Send Email');
@@ -120,6 +142,7 @@ const ComposeEmail = () => {
   const vars = event ? buildVars(event, previewGuest ?? SAMPLE_GUEST) : null;
   const previewHtml = vars ? renderEmail(templateId, { bodyHtml: body, vars, qrDataUrl: qrUrl }) : '';
   const previewSubject = vars ? fillPlaceholders(subject, vars, false) : subject;
+  const previewFrameRef = useEmailPreviewFrame(previewHtml);
 
   const changeEvent = (id: string) => {
     setEventId(id);
@@ -254,7 +277,7 @@ const ComposeEmail = () => {
         </Stack>
 
         <SendPanel>
-          <Card $padded={false}>
+          <PreviewCard>
             <CardHeader
               title="Live Preview"
               subtitle="Exactly what the selected guest will see"
@@ -285,8 +308,8 @@ const ComposeEmail = () => {
                 <strong>{previewSubject || '(no subject)'}</strong>
               </div>
             </PreviewMeta>
-            <PreviewFrame title="Email preview" srcDoc={previewHtml} sandbox="" />
-          </Card>
+            <PreviewFrame ref={previewFrameRef} title="Email preview" />
+          </PreviewCard>
           <Button size="lg" fullWidth disabled={!canSend} onClick={() => setConfirmOpen(true)}>
             <Send /> Send to {recipients.length} recipient{recipients.length === 1 ? '' : 's'}
           </Button>

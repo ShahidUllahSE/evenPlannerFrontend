@@ -25,8 +25,8 @@ export const PLACEHOLDERS: { key: keyof TemplateVars; label: string }[] = [
   { key: 'organizer', label: 'Organizer' },
 ];
 
-const escapeHtml = (value: string) =>
-  value
+const escapeHtml = (value: string | null | undefined) =>
+  String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -125,7 +125,9 @@ const qrBlock = (qr: string | null, ticket: string, border: string, text: string
 
 const shell = (bg: string, inner: string) => `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
 <style>
+  html,body{color-scheme:light;}
   .content p{margin:0 0 14px;} .content ul,.content ol{margin:0 0 14px;padding-left:22px;}
   .content h2{font-size:20px;margin:0 0 12px;} .content h3{font-size:16px;margin:0 0 10px;}
   .content blockquote{margin:0 0 14px;padding-left:14px;border-left:3px solid #CBD5E1;color:#475569;}

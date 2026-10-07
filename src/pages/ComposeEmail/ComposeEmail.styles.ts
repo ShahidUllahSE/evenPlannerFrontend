@@ -114,13 +114,25 @@ export const PreviewMeta = styled.div`
   }
 `;
 
+export const PreviewCard = styled.div`
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.md};
+  box-shadow: ${({ theme }) => theme.shadows.sm};
+  min-width: 0;
+  max-width: 100%;
+  /* Avoid overflow:hidden — it can blank iframes inside sticky panels in Chromium. */
+  overflow: visible;
+`;
+
 export const PreviewFrame = styled.iframe`
   display: block;
   width: 100%;
   height: 640px;
   border: none;
   border-radius: ${({ theme }) => `0 0 ${theme.radii.md} ${theme.radii.md}`};
-  background: ${({ theme }) => theme.colors.background};
+  background: #edeff3;
+  color-scheme: light;
 `;
 
 export const ProgressBar = styled.div<{ $pct: number }>`
