@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BrowserQRCodeReader, type IScannerControls } from '@zxing/browser';
-import { BarcodeFormat, DecodeHintType } from '@zxing/library';
+import { BarcodeFormat, DecodeHintType, type Result } from '@zxing/library';
 
 export type CameraState = 'idle' | 'starting' | 'running' | 'error';
 
@@ -16,15 +16,35 @@ const describeError = (err: unknown) => {
 };
 
 const buildReader = () => {
-  const hints = new Map();
+  const hints = new Map<DecodeHintType, unknown>();
   hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
   hints.set(DecodeHintType.TRY_HARDER, true);
   hints.set(DecodeHintType.CHARACTER_SET, 'UTF-8');
   return new BrowserQRCodeReader(hints, {
-    delayBetweenScanAttempts: 80,
-    delayBetweenScanSuccess: 400,
+    delayBetweenScanAttempts: 50,
+    delayBetweenScanSuccess: 250,
   });
 };
+
+/** Prefer rear camera; avoid hard 1080p constraints that fail on older phones. */
+const CAMERA_CONSTRAINTS: MediaStreamConstraints[] = [
+  {
+    audio: false,
+    video: {
+      facingMode: { ideal: 'environment' },
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+    },
+  },
+  {
+    audio: false,
+    video: { facingMode: { ideal: 'environment' } },
+  },
+  {
+    audio: false,
+    video: true,
+  },
+];
 
 /**
  * Streams the rear camera and reports every QR payload via `onDetect`.
@@ -80,30 +100,29 @@ export const useQrCamera = (onDetect: (text: string) => void) => {
 
       readerRef.current ??= buildReader();
       const reader = readerRef.current;
+      const onResult = (result: Result | undefined) => {
+        const text = result?.getText()?.trim();
+        if (text) onDetectRef.current(text);
+      };
 
-      // Prefer rear camera; fall back to any camera.
-      let controls: IScannerControls;
-      try {
-        controls = await reader.decodeFromConstraints(
-          {
-            audio: false,
-            video: {
-              facingMode: { ideal: 'environment' },
-              width: { ideal: 1920 },
-              height: { ideal: 1080 },
-            },
-          },
-          video,
-          (result) => {
-            const text = result?.getText()?.trim();
-            if (text) onDetectRef.current(text);
-          },
-        );
-      } catch {
-        controls = await reader.decodeFromVideoDevice(undefined, video, (result) => {
-          const text = result?.getText()?.trim();
-          if (text) onDetectRef.current(text);
-        });
+      let controls: IScannerControls | null = null;
+      let lastError: unknown;
+
+      for (const constraints of CAMERA_CONSTRAINTS) {
+        try {
+          controls = await reader.decodeFromConstraints(constraints, video, onResult);
+          break;
+        } catch (err) {
+          lastError = err;
+        }
+      }
+
+      if (!controls) {
+        try {
+          controls = await reader.decodeFromVideoDevice(undefined, video, onResult);
+        } catch (err) {
+          throw lastError ?? err;
+        }
       }
 
       controlsRef.current = controls;

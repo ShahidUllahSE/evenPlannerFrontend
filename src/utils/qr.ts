@@ -6,6 +6,7 @@ interface QrTypeConfig {
   tagline: string;
   description: string;
   encodes: string;
+  /** UI chrome color (swatches / labels). Modules always render black for scan reliability. */
   dark: string;
   light: string;
   errorLevel: 'M' | 'H';
@@ -36,7 +37,7 @@ export const QR_TYPES: Record<QrType, QrTypeConfig> = {
   branded: {
     label: 'Branded Pass',
     tagline: 'Premium look with logo',
-    description: 'Brand-colored verification link with the EventSphere mark in the center.',
+    description: 'Verification link with a small EventSphere mark that stays scannable.',
     encodes: 'Verification link',
     dark: '#0E7C7B',
     light: '#FFFFFF',
@@ -64,21 +65,23 @@ export const samplePayload = (type: QrType): string => {
 
 const cache = new Map<string, string>();
 
+/** Keep the center mark small so ECC can still recover the code on phones. */
 const drawLogo = (canvas: HTMLCanvasElement, color: string) => {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
-  const size = canvas.width * 0.22;
+  const size = canvas.width * 0.12;
+  const pad = Math.max(2, canvas.width * 0.012);
   const x = (canvas.width - size) / 2;
   const y = (canvas.height - size) / 2;
 
   ctx.fillStyle = '#FFFFFF';
   ctx.beginPath();
-  ctx.roundRect(x - 4, y - 4, size + 8, size + 8, 10);
+  ctx.roundRect(x - pad, y - pad, size + pad * 2, size + pad * 2, 6);
   ctx.fill();
 
   ctx.fillStyle = color;
   ctx.beginPath();
-  ctx.roundRect(x, y, size, size, 8);
+  ctx.roundRect(x, y, size, size, 5);
   ctx.fill();
 
   ctx.fillStyle = '#D4A437';
@@ -88,9 +91,12 @@ const drawLogo = (canvas: HTMLCanvasElement, color: string) => {
   ctx.fillText('ES', canvas.width / 2, canvas.height / 2 + 1);
 };
 
-/** Renders a QR as a PNG data URL, styled per QR type. Results are memoized. */
+/**
+ * Renders a QR as a PNG data URL.
+ * Guest-facing codes use black modules + a 4-module quiet zone so phones can read them.
+ */
 export const renderQrDataUrl = async (type: QrType, payload: string, size = 240) => {
-  const key = `${type}:${size}:${payload}`;
+  const key = `v2:${type}:${size}:${payload}`;
   const cached = cache.get(key);
   if (cached) return cached;
 
@@ -98,10 +104,11 @@ export const renderQrDataUrl = async (type: QrType, payload: string, size = 240)
   const canvas = document.createElement('canvas');
   await QRCode.toCanvas(canvas, payload, {
     width: size,
-    margin: 1,
+    margin: 4,
     errorCorrectionLevel: config.errorLevel,
-    color: { dark: config.dark, light: config.light },
+    color: { dark: '#000000', light: '#FFFFFF' },
   });
+  // Tiny center mark only — oversized logos break phone scanning.
   if (config.withLogo) drawLogo(canvas, config.dark);
 
   const url = canvas.toDataURL('image/png');

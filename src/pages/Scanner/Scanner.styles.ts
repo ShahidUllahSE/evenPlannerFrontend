@@ -33,8 +33,8 @@ export const Viewport = styled.div`
   video {
     width: 100%;
     height: 100%;
-    /* contain keeps the full frame visible so aim matches what ZXing decodes */
-    object-fit: contain;
+    /* cover fills the viewfinder so codes appear larger for the decoder */
+    object-fit: cover;
     background: #000;
     display: block;
   }

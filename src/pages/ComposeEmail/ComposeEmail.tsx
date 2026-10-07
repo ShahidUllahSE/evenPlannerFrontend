@@ -130,7 +130,7 @@ const ComposeEmail = () => {
   useEffect(() => {
     if (!qrKey || !previewGuest) return;
     let active = true;
-    renderQrDataUrl(previewGuest.qrType, previewGuest.qrPayload, 336).then((url) => {
+    renderQrDataUrl(previewGuest.qrType, previewGuest.qrPayload, 512).then((url) => {
       if (active) setQr({ key: qrKey, url });
     });
     return () => {
