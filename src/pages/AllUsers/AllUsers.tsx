@@ -60,8 +60,8 @@ const EventLink = styled(Link)`
 type Row = Invitee & { eventTitle: string; eventDate: string };
 
 const AllUsers = () => {
-  useDocumentTitle('All Users');
-  const { events, invitees } = useData();
+  useDocumentTitle('All Guests');
+  const { events, invitees, loading } = useData();
   const [search, setSearch] = useState('');
   const [eventFilter, setEventFilter] = useState('');
   const [category, setCategory] = useState('');
@@ -157,7 +157,11 @@ const AllUsers = () => {
       key: 'checkin',
       header: 'Check-in',
       sortValue: (r) => r.checkIn,
-      render: (r) => <CheckInBadge status={r.checkIn} />,
+      render: (r) => (
+        <span title={r.checkedInBy ? `Checked in by ${r.checkedInBy.name}` : undefined}>
+          <CheckInBadge status={r.checkIn} />
+        </span>
+      ),
     },
     { key: 'phone', header: 'Phone', render: (r) => r.phone || <Muted>—</Muted> },
     { key: 'company', header: 'Company', sortValue: (r) => r.company, render: (r) => r.company || '—' },
@@ -174,12 +178,12 @@ const AllUsers = () => {
   return (
     <>
       <PageHeader
-        title="All Users"
+        title="All Guests"
         subtitle="Every guest across all of your events."
         actions={
           <Button
             variant="secondary"
-            onClick={() => downloadText(invitesToCsv(rows), `all_users_${new Date().toISOString().slice(0, 10)}.csv`)}
+            onClick={() => downloadText(invitesToCsv(rows), `all_guests_${new Date().toISOString().slice(0, 10)}.csv`)}
             disabled={rows.length === 0}
           >
             <Download /> Export CSV
@@ -226,6 +230,7 @@ const AllUsers = () => {
             <option value="">All invitations</option>
             <option value="sent">Sent</option>
             <option value="not_sent">Not sent</option>
+            <option value="failed">Failed</option>
           </Select>
           <Select
             value={checkInFilter}
@@ -242,13 +247,13 @@ const AllUsers = () => {
           rows={rows}
           rowKey={(r) => r.id}
           onRowClick={setQrFor}
-          minWidth="1680px"
+          minWidth="1280px"
           pageSize={25}
           empty={
-            invitees.length === 0
+            invitees.length === 0 && !loading
               ? {
                   icon: <Users />,
-                  title: 'No users yet',
+                  title: 'No guests yet',
                   description: 'Guests imported into any event will show up here.',
                 }
               : undefined

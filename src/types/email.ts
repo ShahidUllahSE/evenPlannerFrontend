@@ -6,6 +6,8 @@ export interface EmailLog {
   subject: string;
   templateId: EmailTemplateId;
   recipientCount: number;
+  sentCount: number;
+  failedCount: number;
   includeQr: boolean;
   sentAt: string;
 }

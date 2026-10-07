@@ -4,15 +4,16 @@ import Button from '@/components/common/Button';
 import { Field, FormGrid, FullRow, Input, Select, Textarea } from '@/components/common/Form';
 import Modal from '@/components/common/Modal';
 import { EVENT_CATEGORIES, EVENT_STATUSES } from '@/constants/options';
+import { useAuth } from '@/context/AuthContext';
 import { useData } from '@/context/DataContext';
+import { errorMessage } from '@/services/api';
 import type { EventInput, EventItem } from '@/types/event';
 
 const EMPTY: EventInput = {
   title: '',
   category: 'Conference',
   description: '',
-  venue: '',
-  city: '',
+  address: '',
   date: '',
   startTime: '09:00',
   endTime: '17:00',
@@ -25,9 +26,8 @@ type Errors = Partial<Record<keyof EventInput, string>>;
 
 const validate = (v: EventInput): Errors => {
   const e: Errors = {};
-  if (!v.title.trim()) e.title = 'Title is required';
-  if (!v.venue.trim()) e.venue = 'Venue is required';
-  if (!v.city.trim()) e.city = 'City is required';
+  if (v.title.trim().length < 3) e.title = 'Title must be at least 3 characters';
+  if (v.address.trim().length < 2) e.address = 'Address is required';
   if (!v.date) e.date = 'Date is required';
   if (!v.organizer.trim()) e.organizer = 'Organizer is required';
   if (!v.capacity || v.capacity < 1) e.capacity = 'Capacity must be at least 1';
@@ -43,11 +43,15 @@ interface EventFormModalProps {
 }
 
 const EventFormFields = ({ event, onClose, onCreated }: Omit<EventFormModalProps, 'open'>) => {
-  const { createEvent, updateEvent } = useData();
+  const { user } = useAuth();
+  const { users, createEvent, updateEvent } = useData();
+  const planners = users.filter((u) => u.role === 'planner' && u.isActive);
+  const [plannerId, setPlannerId] = useState('');
+  const [saving, setSaving] = useState(false);
   const [values, setValues] = useState<EventInput>(() => {
     if (!event) return EMPTY;
-    const { id: _id, qrType: _qr, createdAt: _c, ...rest } = event;
-    return rest;
+    const { title, category, description, address, date, startTime, endTime, capacity, organizer, status } = event;
+    return { title, category, description, address, date, startTime, endTime, capacity, organizer, status };
   });
   const [errors, setErrors] = useState<Errors>({});
   const isEdit = !!event;
@@ -57,37 +61,45 @@ const EventFormFields = ({ event, onClose, onCreated }: Omit<EventFormModalProps
     setErrors((e) => ({ ...e, [key]: undefined }));
   };
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     const found = validate(values);
     setErrors(found);
     if (Object.keys(found).length) return;
 
-    const clean = { ...values, title: values.title.trim(), venue: values.venue.trim() };
-    if (isEdit) {
-      updateEvent(event.id, clean);
-      toast.success('Event updated');
-    } else {
-      const created = createEvent(clean);
-      toast.success('Event created');
-      onCreated?.(created);
+    const clean = { ...values, title: values.title.trim(), address: values.address.trim() };
+    setSaving(true);
+    try {
+      if (isEdit) {
+        await updateEvent(event.id, clean);
+        toast.success('Event updated');
+        onClose();
+      } else {
+        const created = await createEvent({ ...clean, plannerId: plannerId || undefined });
+        toast.success('Event created');
+        onClose();
+        onCreated?.(created);
+      }
+    } catch (err) {
+      toast.error(errorMessage(err));
+      setSaving(false);
     }
-    onClose();
   };
 
   return (
     <Modal
       open
       onClose={onClose}
+      locked={saving}
       size="lg"
       title={isEdit ? 'Edit Event' : 'Create New Event'}
       subtitle={isEdit ? 'Update the details of this event.' : 'Fill in the details to set up your event.'}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" form="event-form">
+          <Button type="submit" form="event-form" loading={saving}>
             {isEdit ? 'Save Changes' : 'Create Event'}
           </Button>
         </>
@@ -106,6 +118,20 @@ const EventFormFields = ({ event, onClose, onCreated }: Omit<EventFormModalProps
               />
             </Field>
           </FullRow>
+          {!isEdit && user?.role === 'admin' && (
+            <FullRow>
+              <Field label="Event planner" hint="The planner who will own and manage this event.">
+                <Select value={plannerId} onChange={(e) => setPlannerId(e.target.value)}>
+                  <option value="">Me ({user.name})</option>
+                  {planners.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} · {p.email}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </FullRow>
+          )}
           <Field label="Category" required>
             <Select
               value={values.category}
@@ -128,22 +154,16 @@ const EventFormFields = ({ event, onClose, onCreated }: Omit<EventFormModalProps
               ))}
             </Select>
           </Field>
-          <Field label="Venue" required error={errors.venue}>
-            <Input
-              value={values.venue}
-              onChange={(e) => set('venue', e.target.value)}
-              placeholder="e.g. Expo Centre"
-              aria-invalid={!!errors.venue}
-            />
-          </Field>
-          <Field label="City" required error={errors.city}>
-            <Input
-              value={values.city}
-              onChange={(e) => set('city', e.target.value)}
-              placeholder="e.g. Lahore"
-              aria-invalid={!!errors.city}
-            />
-          </Field>
+          <FullRow>
+            <Field label="Address" required error={errors.address}>
+              <Input
+                value={values.address}
+                onChange={(e) => set('address', e.target.value)}
+                placeholder="e.g. Expo Centre, Avenue 1, Lahore"
+                aria-invalid={!!errors.address}
+              />
+            </Field>
+          </FullRow>
         </FormGrid>
         <FormGrid $columns={3} style={{ marginTop: 16 }}>
           <Field label="Date" required error={errors.date}>

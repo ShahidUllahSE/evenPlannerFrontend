@@ -23,6 +23,8 @@ export interface Column<T> {
   sortValue?: (row: T) => string | number;
   width?: string;
   align?: 'left' | 'center' | 'right';
+  /** Allow the cell to wrap (for long text like addresses). */
+  wrap?: boolean;
   /** Pin the column to the right edge while scrolling horizontally (actions). */
   stickyRight?: boolean;
 }
@@ -69,7 +71,7 @@ function DataTable<T>({
   onSelectionChange,
   onRowClick,
   pageSize: initialPageSize = 10,
-  minWidth = '960px',
+  minWidth = '880px',
   empty,
 }: DataTableProps<T>) {
   const [sort, setSort] = useState<SortState>(null);
@@ -141,8 +143,9 @@ function DataTable<T>({
               {columns.map((col) => (
                 <Th
                   key={col.key}
-                  style={{ width: col.width }}
+                  style={col.width ? { width: col.width, minWidth: col.width } : undefined}
                   $align={col.align}
+                  $wrap={col.wrap}
                   $stickyRight={col.stickyRight}
                   aria-sort={
                     sort?.key === col.key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined
@@ -194,7 +197,13 @@ function DataTable<T>({
                       </Td>
                     )}
                     {columns.map((col) => (
-                      <Td key={col.key} $align={col.align} $stickyRight={col.stickyRight}>
+                      <Td
+                        key={col.key}
+                        $align={col.align}
+                        $wrap={col.wrap}
+                        $stickyRight={col.stickyRight}
+                        style={col.width ? { width: col.width, minWidth: col.width } : undefined}
+                      >
                         {col.render(row, start + index)}
                       </Td>
                     ))}

@@ -2,7 +2,28 @@ import styled, { css } from 'styled-components';
 
 export const Scroll = styled.div`
   width: 100%;
+  max-width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+
+  /* Thin, unobtrusive scrollbar so wide tables still feel polished */
+  scrollbar-width: thin;
+  scrollbar-color: ${({ theme }) => `${theme.colors.borderStrong} transparent`};
+
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: ${({ theme }) => theme.colors.borderStrong};
+    border-radius: 999px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
 `;
 
 export const Table = styled.table<{ $minWidth: string }>`
@@ -15,12 +36,13 @@ export const Table = styled.table<{ $minWidth: string }>`
 const stickyRight = css`
   position: sticky;
   right: 0;
-  box-shadow: -8px 0 12px -10px rgba(15, 27, 45, 0.25);
+  z-index: 2;
+  box-shadow: -10px 0 16px -12px rgba(15, 27, 45, 0.28);
 `;
 
-export const Th = styled.th<{ $align?: string; $stickyRight?: boolean }>`
+export const Th = styled.th<{ $align?: string; $stickyRight?: boolean; $wrap?: boolean }>`
   height: 44px;
-  padding: 0 16px;
+  padding: 0 14px;
   text-align: ${({ $align = 'left' }) => $align};
   font-size: ${({ theme }) => theme.fontSizes.xs};
   font-weight: 600;
@@ -29,30 +51,45 @@ export const Th = styled.th<{ $align?: string; $stickyRight?: boolean }>`
   color: ${({ theme }) => theme.colors.textMuted};
   background: ${({ theme }) => theme.colors.surfaceAlt};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  white-space: nowrap;
+  white-space: ${({ $wrap }) => ($wrap ? 'normal' : 'nowrap')};
+  vertical-align: middle;
   ${({ $stickyRight }) => $stickyRight && stickyRight}
+  ${({ $stickyRight }) => $stickyRight && 'z-index: 3;'}
 `;
 
-export const Td = styled.td<{ $align?: string; $stickyRight?: boolean }>`
-  height: 60px;
-  padding: 10px 16px;
+export const Td = styled.td<{ $align?: string; $stickyRight?: boolean; $wrap?: boolean }>`
+  height: 56px;
+  padding: 12px 14px;
   text-align: ${({ $align = 'left' }) => $align};
   font-size: ${({ theme }) => theme.fontSizes.md};
   color: ${({ theme }) => theme.colors.text};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  background: inherit;
-  white-space: nowrap;
+  background: ${({ theme }) => theme.colors.surface};
+  white-space: ${({ $wrap }) => ($wrap ? 'normal' : 'nowrap')};
   vertical-align: middle;
+  max-width: ${({ $wrap }) => ($wrap ? '280px' : 'none')};
+  line-height: 1.4;
   ${({ $stickyRight }) => $stickyRight && stickyRight}
 `;
 
 export const Tr = styled.tr<{ $clickable: boolean; $selected: boolean }>`
-  background: ${({ theme, $selected }) => ($selected ? theme.colors.primarySoft : theme.colors.surface)};
   transition: background 0.12s ease;
   ${({ $clickable }) => $clickable && 'cursor: pointer;'}
 
-  &:hover {
+  ${({ theme, $selected }) =>
+    $selected &&
+    css`
+      ${Td} {
+        background: ${theme.colors.primarySoft};
+      }
+    `}
+
+  &:hover ${Td} {
     background: ${({ theme, $selected }) => ($selected ? theme.colors.primarySoft : theme.colors.surfaceAlt)};
+  }
+
+  &:last-child ${Td} {
+    border-bottom: none;
   }
 `;
 
@@ -68,6 +105,7 @@ export const HeaderButton = styled.button<{ $active: boolean }>`
   svg {
     width: 13px;
     height: 13px;
+    flex-shrink: 0;
     opacity: ${({ $active }) => ($active ? 1 : 0.5)};
   }
 `;
@@ -84,14 +122,23 @@ export const Footer = styled.div`
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.spacing.sm};
   padding: ${({ theme }) => `${theme.spacing.md} ${theme.spacing.lg}`};
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surface};
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: ${({ theme }) => theme.spacing.md};
+  }
 `;
 
 export const PageInfo = styled.div`
   display: flex;
   align-items: center;
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 4px 8px;
   font-size: ${({ theme }) => theme.fontSizes.sm};
   color: ${({ theme }) => theme.colors.textMuted};
 
@@ -99,22 +146,37 @@ export const PageInfo = styled.div`
     color: ${({ theme }) => theme.colors.text};
     font-weight: 600;
   }
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    justify-content: space-between;
+  }
 `;
 
 export const PageSizeSelect = styled.select`
-  margin-left: 12px;
-  height: 30px;
-  padding: 0 8px;
+  margin-left: 8px;
+  height: 32px;
+  padding: 0 10px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: ${({ theme }) => theme.radii.sm};
   background: ${({ theme }) => theme.colors.surface};
   font-size: ${({ theme }) => theme.fontSizes.sm};
+  color: ${({ theme }) => theme.colors.text};
   cursor: pointer;
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    margin-left: auto;
+  }
 `;
 
 export const PageControls = styled.div`
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 4px;
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    justify-content: center;
+  }
 `;
 
 export const PageButton = styled.button<{ $active?: boolean }>`

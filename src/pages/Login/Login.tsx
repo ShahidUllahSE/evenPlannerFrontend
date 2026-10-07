@@ -1,16 +1,15 @@
 import { useState, type FormEvent } from 'react';
-import { ArrowRight, Eye, EyeOff, Lock, Mail, MailCheck, QrCode, Upload } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Lock, Mail, MailCheck, QrCode, ScanLine, Upload } from 'lucide-react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Button from '@/components/common/Button';
 import { Input } from '@/components/common/Form';
 import Logo from '@/components/layout/Logo';
-import { DEMO_CREDENTIALS } from '@/constants/auth';
-import { ROUTES } from '@/constants/routes';
+import { homeFor } from '@/constants/routes';
 import { useAuth } from '@/context/AuthContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { errorMessage } from '@/services/api';
 import {
   BrandPanel,
-  DemoBox,
   ErrorBox,
   Feature,
   FeatureList,
@@ -29,6 +28,7 @@ const FEATURES = [
   { icon: Upload, title: 'Import guest lists', text: 'Upload CSV files and validate every row instantly.' },
   { icon: QrCode, title: 'Unique QR passes', text: 'Every guest gets a one-of-a-kind entry code.' },
   { icon: MailCheck, title: 'Beautiful invitations', text: 'Send designed emails with ready templates.' },
+  { icon: ScanLine, title: 'Fast door check-in', text: 'Scan tickets from any phone; each pass works only once.' },
 ];
 
 const Login = () => {
@@ -43,9 +43,9 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const from = (location.state as { from?: string } | null)?.from ?? ROUTES.DASHBOARD;
+  const from = (location.state as { from?: string } | null)?.from;
 
-  if (user) return <Navigate to={from} replace />;
+  if (user) return <Navigate to={from ?? homeFor(user.role)} replace />;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -55,10 +55,13 @@ const Login = () => {
     }
     setError('');
     setLoading(true);
-    const ok = await login(email, password, remember);
-    setLoading(false);
-    if (ok) navigate(from, { replace: true });
-    else setError('Invalid email or password. Use the demo credentials below.');
+    try {
+      const signedIn = await login(email, password, remember);
+      navigate(from ?? homeFor(signedIn.role), { replace: true });
+    } catch (err) {
+      setError(errorMessage(err, 'Could not sign in. Please try again.'));
+      setLoading(false);
+    }
   };
 
   return (
@@ -87,7 +90,7 @@ const Login = () => {
       <FormPanel>
         <FormCard onSubmit={submit} noValidate>
           <h2>Welcome back 👋</h2>
-          <p>Sign in to manage your events and guests.</p>
+          <p>Sign in with the account your administrator or event planner gave you.</p>
 
           {error && <ErrorBox role="alert">{error}</ErrorBox>}
 
@@ -139,26 +142,6 @@ const Login = () => {
           <Button type="submit" size="lg" fullWidth loading={loading}>
             Sign in <ArrowRight />
           </Button>
-
-          <DemoBox>
-            <div>
-              <strong>Demo credentials</strong>
-              <span>
-                {DEMO_CREDENTIALS.email} · {DEMO_CREDENTIALS.password}
-              </span>
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                setEmail(DEMO_CREDENTIALS.email);
-                setPassword(DEMO_CREDENTIALS.password);
-                setError('');
-              }}
-            >
-              Autofill
-            </Button>
-          </DemoBox>
         </FormCard>
       </FormPanel>
     </Page>

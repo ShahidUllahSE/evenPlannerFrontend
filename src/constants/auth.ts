@@ -1,11 +1,9 @@
-// Dummy credentials until the backend auth is ready.
-export const DEMO_CREDENTIALS = {
-  email: 'admin@eventsphere.com',
-  password: 'admin123',
-} as const;
+import type { Role } from '@/types/user';
 
-export const DEMO_USER = {
-  name: 'Admin User',
-  email: DEMO_CREDENTIALS.email,
-  role: 'Event Administrator',
-} as const;
+export const ROLE_LABELS: Record<Role, string> = {
+  admin: 'Administrator',
+  planner: 'Event Planner',
+  scanner: 'Door Scanner',
+};
+
+export const MIN_PASSWORD_LENGTH = 8;

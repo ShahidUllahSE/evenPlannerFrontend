@@ -1,7 +1,7 @@
 import { Check } from 'lucide-react';
 import styled from 'styled-components';
 import type { QrType } from '@/types/qr';
-import { buildQrPayload, QR_TYPE_ORDER, QR_TYPES } from '@/utils/qr';
+import { QR_TYPE_ORDER, QR_TYPES, samplePayload } from '@/utils/qr';
 import QrImage from './QrImage';
 
 const Grid = styled.div`
@@ -91,8 +91,6 @@ const Tick = styled.span`
   }
 `;
 
-const SAMPLE = { ticketCode: 'EP-DEMO-7K3F', eventId: 'evt_sample', inviteeId: 'inv_sample' };
-
 interface QrTypePickerProps {
   value: QrType | null;
   onChange: (type: QrType) => void;
@@ -121,7 +119,7 @@ const QrTypePicker = ({ value, onChange, lockedTo }: QrTypePickerProps) => (
             </Tick>
           )}
           <QrFrame>
-            <QrImage type={type} payload={buildQrPayload(type, SAMPLE)} size={112} resolution={240} />
+            <QrImage type={type} payload={samplePayload(type)} size={112} resolution={240} />
           </QrFrame>
           <h4>{config.label}</h4>
           <small>{config.tagline}</small>

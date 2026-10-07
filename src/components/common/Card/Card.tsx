@@ -8,6 +8,8 @@ export const Card = styled.section<{ $padded?: boolean }>`
   box-shadow: ${({ theme }) => theme.shadows.sm};
   padding: ${({ theme, $padded = true }) => ($padded ? theme.spacing.lg : 0)};
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 `;
 
 const HeaderRow = styled.div<{ $bordered: boolean }>`

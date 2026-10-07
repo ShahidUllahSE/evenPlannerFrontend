@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { ArrowRight, CalendarDays, CircleCheck, MailCheck, MapPin, Plus, Users } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowRight, CalendarDays, MailCheck, MapPin, Plus, ScanLine, Users } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import Button from '@/components/common/Button';
@@ -13,15 +13,18 @@ import {
   EmailBadge,
   EventStatusBadge,
   RsvpBadge,
+  ScanResultBadge,
 } from '@/components/common/StatusBadges';
-import { Meter, Mono, Muted, PersonCell } from '@/components/common/TableParts';
+import { Meter, Mono, Muted, PersonCell, Stack } from '@/components/common/TableParts';
 import EventFormModal from '@/components/events/EventFormModal';
 import { eventDetailsPath, ROUTES } from '@/constants/routes';
 import { useAuth } from '@/context/AuthContext';
 import { useData } from '@/context/DataContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { api } from '@/services/api';
 import type { Invitee } from '@/types/invitee';
-import { daysUntil, formatDate, formatNumber, formatTime } from '@/utils/format';
+import type { ScanLog } from '@/types/scan';
+import { daysUntil, formatDate, formatDateTime, formatNumber, formatTime } from '@/utils/format';
 
 const StatsGrid = styled.div`
   display: grid;
@@ -58,6 +61,7 @@ const EventRow = styled.li`
   gap: ${({ theme }) => theme.spacing.md};
   padding: ${({ theme }) => `14px ${theme.spacing.lg}`};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  min-width: 0;
 
   &:last-child {
     border-bottom: none;
@@ -65,6 +69,10 @@ const EventRow = styled.li`
 
   a {
     display: contents;
+  }
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.mobile}) {
+    flex-wrap: wrap;
   }
 `;
 
@@ -109,13 +117,18 @@ const EventInfo = styled.div`
     display: flex;
     align-items: center;
     gap: 6px;
+    min-width: 0;
     font-size: ${({ theme }) => theme.fontSizes.sm};
     color: ${({ theme }) => theme.colors.textMuted};
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   svg {
     width: 13px;
     height: 13px;
+    flex-shrink: 0;
   }
 `;
 
@@ -124,6 +137,7 @@ const RowEnd = styled.div`
   flex-direction: column;
   align-items: flex-end;
   gap: 4px;
+  flex-shrink: 0;
   font-size: ${({ theme }) => theme.fontSizes.xs};
   color: ${({ theme }) => theme.colors.textMuted};
 `;
@@ -168,20 +182,58 @@ const ViewAll = styled(Link)`
   }
 `;
 
+interface DashboardSummary {
+  scansToday: number;
+  recentScans: ScanLog[];
+  users?: Partial<Record<'admin' | 'planner' | 'scanner', number>>;
+}
+
+const scanColumns: Column<ScanLog>[] = [
+  { key: 'time', header: 'Time', render: (s) => <Muted>{formatDateTime(s.createdAt)}</Muted> },
+  {
+    key: 'guest',
+    header: 'Guest',
+    render: (s) =>
+      s.inviteeId ? (
+        <Stack>
+          <strong>{s.inviteeId.name}</strong>
+          <span>{s.inviteeId.ticketCode}</span>
+        </Stack>
+      ) : (
+        <Mono>{s.ticketCode ?? 'Unreadable code'}</Mono>
+      ),
+  },
+  { key: 'event', header: 'Event', render: (s) => <Muted>{s.eventId?.title ?? '—'}</Muted> },
+  { key: 'result', header: 'Result', render: (s) => <ScanResultBadge result={s.result} /> },
+  { key: 'by', header: 'Scanned by', render: (s) => s.scannerId?.name ?? <Muted>Deleted user</Muted> },
+];
+
 const Dashboard = () => {
   useDocumentTitle('Dashboard');
   const { user } = useAuth();
   const { events, invitees } = useData();
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .get<DashboardSummary>('/dashboard')
+      .then((res) => active && setSummary(res))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const eventById = useMemo(() => new Map(events.map((e) => [e.id, e])), [events]);
 
   const stats = useMemo(() => {
     const sent = invitees.filter((i) => i.emailStatus === 'sent').length;
-    const accepted = invitees.filter((i) => i.rsvp === 'accepted').length;
+    const checkedIn = invitees.filter((i) => i.checkIn === 'checked_in').length;
     const activeEvents = events.filter((e) => e.status === 'upcoming' || e.status === 'ongoing').length;
-    return { sent, accepted, activeEvents };
+    return { sent, checkedIn, activeEvents };
   }, [events, invitees]);
 
   const upcoming = useMemo(
@@ -232,7 +284,11 @@ const Dashboard = () => {
     <>
       <PageHeader
         title={`Good day, ${user?.name.split(' ')[0] ?? 'there'}`}
-        subtitle="Here's what's happening across your events."
+        subtitle={
+          user?.role === 'admin' && summary?.users
+            ? `Across all planners · ${summary.users.planner ?? 0} planners and ${summary.users.scanner ?? 0} scanners`
+            : "Here's what's happening across your events."
+        }
         actions={
           <Button onClick={() => setCreating(true)}>
             <Plus /> Create Event
@@ -263,14 +319,10 @@ const Dashboard = () => {
           tone="success"
         />
         <StatCard
-          label="Accepted RSVPs"
-          value={formatNumber(stats.accepted)}
-          hint={
-            stats.sent > 0
-              ? `${Math.round((stats.accepted / stats.sent) * 100)}% of invited guests`
-              : 'No invitations sent yet'
-          }
-          icon={<CircleCheck />}
+          label="Checked In"
+          value={formatNumber(stats.checkedIn)}
+          hint={`${formatNumber(summary?.scansToday ?? 0)} scans today`}
+          icon={<ScanLine />}
           tone="accent"
         />
       </StatsGrid>
@@ -303,7 +355,7 @@ const Dashboard = () => {
                       <EventInfo>
                         <strong>{e.title}</strong>
                         <span>
-                          <MapPin /> {e.venue}, {e.city} · {formatTime(e.startTime)}
+                          <MapPin /> {e.address} · {formatTime(e.startTime)}
                         </span>
                       </EventInfo>
                       <RowEnd>
@@ -338,13 +390,32 @@ const Dashboard = () => {
         </Card>
       </TwoCol>
 
+      <Card $padded={false} style={{ marginBottom: 24 }}>
+        <CardHeader
+          title="Recent Door Scans"
+          subtitle="Latest check-in attempts at your events"
+          actions={
+            <ViewAll to={ROUTES.SCAN_HISTORY}>
+              Full history <ArrowRight />
+            </ViewAll>
+          }
+        />
+        <DataTable
+          columns={scanColumns}
+          rows={summary?.recentScans ?? []}
+          rowKey={(s) => s.id}
+          minWidth="720px"
+          empty={{ icon: <ScanLine />, title: 'No scans yet', description: 'Check-ins appear here as guests arrive.' }}
+        />
+      </Card>
+
       <Card $padded={false}>
         <CardHeader
           title="Recently Added Guests"
           subtitle="Latest invitees across all events"
           actions={
             <ViewAll to={ROUTES.USERS}>
-              View all users <ArrowRight />
+              View all guests <ArrowRight />
             </ViewAll>
           }
         />

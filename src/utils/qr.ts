@@ -47,53 +47,18 @@ export const QR_TYPES: Record<QrType, QrTypeConfig> = {
 
 export const QR_TYPE_ORDER: QrType[] = ['standard', 'secure', 'branded'];
 
-const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I
-
-const randomChunk = (length: number) => {
-  const bytes = crypto.getRandomValues(new Uint8Array(length));
-  return Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('');
-};
-
-/** Generates a ticket code not already present in `taken` and adds it to the set. */
-export const generateTicketCode = (taken: Set<string>): string => {
-  let code: string;
-  do {
-    code = `EP-${randomChunk(4)}-${randomChunk(4)}`;
-  } while (taken.has(code));
-  taken.add(code);
-  return code;
-};
-
-// Placeholder signing for the frontend demo. Real signing (HMAC with a server
-// secret) must happen on the backend so tokens cannot be forged.
-const DEMO_SECRET = 'eventsphere-demo-secret';
-
-export const signTicket = (ticketCode: string, eventId: string, inviteeId: string): string => {
-  const input = `${ticketCode}|${eventId}|${inviteeId}|${DEMO_SECRET}`;
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < input.length; i++) {
-    hash ^= input.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(36).toUpperCase();
-};
-
-export const VERIFY_BASE_URL = 'https://eventsphere.app/verify';
-
-export const buildQrPayload = (
-  type: QrType,
-  ticket: { ticketCode: string; eventId: string; inviteeId: string },
-): string => {
-  const { ticketCode, eventId, inviteeId } = ticket;
-  const sig = signTicket(ticketCode, eventId, inviteeId);
-
+/**
+ * Example payload in each style, for previews only. Real tickets are created and
+ * signed by the server, so the scanner can verify them.
+ */
+export const samplePayload = (type: QrType): string => {
   switch (type) {
     case 'standard':
-      return ticketCode;
+      return 'EP-SAMP-LE42';
     case 'secure':
-      return JSON.stringify({ v: 1, t: ticketCode, e: eventId, u: inviteeId, s: sig });
+      return JSON.stringify({ v: 1, t: 'EP-SAMP-LE42', e: 'event', u: 'guest', s: 'signature' });
     case 'branded':
-      return `${VERIFY_BASE_URL}/${ticketCode}?e=${eventId}&s=${sig}`;
+      return 'https://eventsphere.app/verify/EP-SAMP-LE42?e=event&s=signature';
   }
 };
 

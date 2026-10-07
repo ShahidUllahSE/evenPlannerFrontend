@@ -162,7 +162,7 @@ const QrTicketModal = ({ invitee, event, onClose }: QrTicketModalProps) => {
               <Calendar /> {formatDate(event.date)} · {formatTime(event.startTime)}
             </span>
             <span>
-              <MapPin /> {event.venue}, {event.city}
+              <MapPin /> {event.address}
             </span>
           </Meta>
         </TicketHead>

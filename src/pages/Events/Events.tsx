@@ -13,6 +13,7 @@ import { EventStatusBadge } from '@/components/common/StatusBadges';
 import {
   Actions,
   IconAction,
+  Clamp,
   Meter,
   Muted,
   Stack,
@@ -22,8 +23,10 @@ import {
 import EventFormModal from '@/components/events/EventFormModal';
 import { EVENT_CATEGORIES, EVENT_STATUSES } from '@/constants/options';
 import { eventDetailsPath } from '@/constants/routes';
+import { useAuth } from '@/context/AuthContext';
 import { useData } from '@/context/DataContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { errorMessage } from '@/services/api';
 import type { EventItem } from '@/types/event';
 import { formatDate, formatTime } from '@/utils/format';
 import { QR_TYPES } from '@/utils/qr';
@@ -37,7 +40,9 @@ interface EventRow extends EventItem {
 const Events = () => {
   useDocumentTitle('Events');
   const navigate = useNavigate();
-  const { events, invitees, deleteEvent } = useData();
+  const { user } = useAuth();
+  const { events, invitees, loading, deleteEvent } = useData();
+  const isAdmin = user?.role === 'admin';
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [category, setCategory] = useState('');
@@ -61,7 +66,7 @@ const Events = () => {
       .filter(
         (e) =>
           !q ||
-          [e.title, e.venue, e.city, e.organizer].some((field) => field.toLowerCase().includes(q)),
+          [e.title, e.address, e.organizer, e.createdBy?.name ?? ''].some((field) => field.toLowerCase().includes(q)),
       )
       .map((e) => {
         const c = counts.get(e.id);
@@ -105,17 +110,30 @@ const Events = () => {
       ),
     },
     {
-      key: 'venue',
-      header: 'Venue',
-      sortValue: (e) => e.city,
-      render: (e) => (
-        <Stack>
-          <strong>{e.venue}</strong>
-          <span>{e.city}</span>
-        </Stack>
-      ),
+      key: 'address',
+      header: 'Address',
+      wrap: true,
+      width: '200px',
+      sortValue: (e) => e.address,
+      render: (e) => (e.address ? <Clamp title={e.address}>{e.address}</Clamp> : '—'),
     },
-    { key: 'organizer', header: 'Organizer', sortValue: (e) => e.organizer, render: (e) => e.organizer },
+    {
+      key: 'organizer',
+      header: 'Organizer',
+      wrap: true,
+      sortValue: (e) => e.organizer,
+      render: (e) => (e.organizer ? <Clamp title={e.organizer}>{e.organizer}</Clamp> : '—'),
+    },
+    ...(isAdmin
+      ? [
+          {
+            key: 'owner',
+            header: 'Planner',
+            sortValue: (e: EventRow) => e.createdBy?.name ?? '',
+            render: (e: EventRow) => <Muted>{e.createdBy?.name ?? '—'}</Muted>,
+          },
+        ]
+      : []),
     {
       key: 'invitees',
       header: 'Guests / Capacity',
@@ -185,7 +203,7 @@ const Events = () => {
     <>
       <PageHeader
         title="Events"
-        subtitle="Create and manage all your events in one place."
+        subtitle={isAdmin ? 'Every event, across all planners.' : 'Create and manage your events in one place.'}
         actions={
           <Button onClick={openCreate}>
             <Plus /> Create Event
@@ -196,7 +214,7 @@ const Events = () => {
       <Card $padded={false}>
         <TableToolbar>
           <SearchInput
-            placeholder="Search by title, venue, city…"
+            placeholder="Search by title, address…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -221,9 +239,9 @@ const Events = () => {
           rows={rows}
           rowKey={(e) => e.id}
           onRowClick={(e) => navigate(eventDetailsPath(e.id))}
-          minWidth="1280px"
+          minWidth={isAdmin ? '1180px' : '1080px'}
           empty={
-            events.length === 0
+            events.length === 0 && !loading
               ? {
                   icon: <CalendarPlus />,
                   title: 'No events yet',
@@ -258,8 +276,9 @@ const Events = () => {
         confirmLabel="Delete event"
         onConfirm={() => {
           if (!deleting) return;
-          deleteEvent(deleting.id);
-          toast.success('Event deleted');
+          deleteEvent(deleting.id)
+            .then(() => toast.success('Event deleted'))
+            .catch((err) => toast.error(errorMessage(err)));
         }}
         onClose={() => setDeleting(null)}
       />

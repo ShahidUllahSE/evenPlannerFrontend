@@ -213,28 +213,3 @@ export const ErrorBox = styled.div`
   font-size: ${({ theme }) => theme.fontSizes.sm};
   font-weight: 500;
 `;
-
-export const DemoBox = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: ${({ theme }) => theme.spacing.md};
-  margin-top: ${({ theme }) => theme.spacing.sm};
-  padding: 14px 16px;
-  border-radius: ${({ theme }) => theme.radii.md};
-  border: 1px dashed ${({ theme }) => theme.colors.accent};
-  background: ${({ theme }) => theme.colors.accentSoft};
-
-  strong {
-    display: block;
-    font-size: ${({ theme }) => theme.fontSizes.sm};
-    color: #6b4f12;
-  }
-
-  span {
-    font-family: ${({ theme }) => theme.fonts.mono};
-    font-size: ${({ theme }) => theme.fontSizes.xs};
-    color: #6b4f12;
-    word-break: break-all;
-  }
-`;

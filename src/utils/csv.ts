@@ -121,5 +121,7 @@ export const invitesToCsv = (rows: (Invitee & { eventTitle: string })[]): string
       rsvp: r.rsvp,
       email_status: r.emailStatus,
       check_in: r.checkIn,
+      checked_in_at: r.checkedInAt ?? '',
+      checked_in_by: r.checkedInBy?.name ?? '',
     })),
   );

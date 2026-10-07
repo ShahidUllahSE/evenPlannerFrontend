@@ -12,20 +12,39 @@ export const TableToolbar = styled.div`
 
   select {
     width: auto;
-    min-width: 150px;
+    min-width: 140px;
+    max-width: 100%;
   }
 
   @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    > *,
-    select {
+    align-items: stretch;
+
+    /* Search grows full-width; filters share the next row */
+    > div:first-child {
       flex: 1 1 100%;
       max-width: none;
+    }
+
+    select {
+      flex: 1 1 calc(50% - ${({ theme }) => theme.spacing.sm});
+      min-width: 0;
+    }
+  }
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.mobile}) {
+    select {
+      flex: 1 1 100%;
     }
   }
 `;
 
 export const ToolbarSpacer = styled.div`
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 8px;
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    display: none;
+  }
 `;
 
 export const SelectionBar = styled.div`
@@ -42,6 +61,7 @@ export const SelectionBar = styled.div`
 `;
 
 export const Mono = styled.span`
+  display: inline-block;
   font-family: ${({ theme }) => theme.fonts.mono};
   font-size: ${({ theme }) => theme.fontSizes.sm};
   letter-spacing: 0.02em;
@@ -49,10 +69,27 @@ export const Mono = styled.span`
   border-radius: ${({ theme }) => theme.radii.sm};
   background: ${({ theme }) => theme.colors.neutralSoft};
   color: ${({ theme }) => theme.colors.text};
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
 `;
 
 export const Muted = styled.span`
   color: ${({ theme }) => theme.colors.textMuted};
+`;
+
+/** Long text that wraps up to 2 lines inside table cells. */
+export const Clamp = styled.span`
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+  line-height: 1.35;
+  max-width: 260px;
+  word-break: break-word;
 `;
 
 export const Stack = styled.div`
@@ -60,21 +97,30 @@ export const Stack = styled.div`
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  max-width: 260px;
 
   strong {
     font-weight: 600;
     color: ${({ theme }) => theme.colors.text};
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   span {
     font-size: ${({ theme }) => theme.fontSizes.sm};
     color: ${({ theme }) => theme.colors.textMuted};
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 `;
 
 export const Actions = styled.div`
   display: inline-flex;
-  gap: 4px;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
 `;
 
 export const IconAction = styled.button<{ $danger?: boolean }>`
@@ -134,7 +180,8 @@ export const PersonCell = ({ name, email }: { name: string; email: string }) => 
 
 const Track = styled.div`
   width: 100%;
-  min-width: 80px;
+  min-width: 72px;
+  max-width: 140px;
   height: 6px;
   border-radius: 999px;
   background: ${({ theme }) => theme.colors.neutralSoft};
@@ -152,7 +199,8 @@ const MeterWrap = styled.div`
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-width: 120px;
+  min-width: 100px;
+  max-width: 140px;
 
   span {
     font-size: ${({ theme }) => theme.fontSizes.sm};

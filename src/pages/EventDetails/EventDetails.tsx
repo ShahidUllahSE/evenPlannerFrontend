@@ -9,6 +9,7 @@ import {
   Pencil,
   QrCode,
   RefreshCw,
+  ScanLine,
   Send,
   Trash2,
   UserPlus,
@@ -44,16 +45,19 @@ import {
   TableToolbar,
   ToolbarSpacer,
 } from '@/components/common/TableParts';
+import CheckInActivityCard from '@/components/events/CheckInActivityCard';
 import EventFormModal from '@/components/events/EventFormModal';
+import EventScannersCard from '@/components/events/EventScannersCard';
 import CsvImportModal from '@/components/invitees/CsvImportModal';
 import InviteeFormModal from '@/components/invitees/InviteeFormModal';
 import QrImage from '@/components/qr/QrImage';
 import QrTicketModal from '@/components/qr/QrTicketModal';
 import QrTypePicker from '@/components/qr/QrTypePicker';
 import { INVITEE_CATEGORIES } from '@/constants/options';
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, scanPath } from '@/constants/routes';
 import { useData } from '@/context/DataContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { errorMessage } from '@/services/api';
 import type { EmailLog } from '@/types/email';
 import type { Invitee } from '@/types/invitee';
 import type { QrType } from '@/types/qr';
@@ -65,7 +69,8 @@ import { InfoGrid, InfoTile, Section, StatsGrid } from './EventDetails.styles';
 const EventDetails = () => {
   const { eventId = '' } = useParams();
   const navigate = useNavigate();
-  const { events, invitees, emailLogs, deleteInvitees, regenerateQrCodes } = useData();
+  const { events, invitees, emailLogs, loading, deleteInvitees, regenerateQrCodes, refreshEventInvitees } =
+    useData();
   const event = events.find((e) => e.id === eventId);
   useDocumentTitle(event?.title ?? 'Event');
 
@@ -85,6 +90,7 @@ const EventDetails = () => {
   const [toDelete, setToDelete] = useState<string[]>([]);
   const [regenOpen, setRegenOpen] = useState(false);
   const [regenType, setRegenType] = useState<QrType | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
 
   const eventInvitees = useMemo(
     () => invitees.filter((i) => i.eventId === eventId),
@@ -107,11 +113,12 @@ const EventDetails = () => {
   const logs = useMemo(() => emailLogs.filter((l) => l.eventId === eventId), [emailLogs, eventId]);
 
   if (!event) {
+    if (loading) return null;
     return (
       <Card>
         <EmptyState
           title="Event not found"
-          description="It may have been deleted."
+          description="It may have been deleted, or it belongs to another planner."
           action={<Button onClick={() => navigate(ROUTES.EVENTS)}>Back to events</Button>}
         />
       </Card>
@@ -164,14 +171,28 @@ const EventDetails = () => {
       key: 'email',
       header: 'Invitation',
       sortValue: (i) => i.emailStatus,
-      render: (i) => <EmailBadge status={i.emailStatus} />,
+      render: (i) => (
+        <span title={i.emailError ?? undefined}>
+          <EmailBadge status={i.emailStatus} />
+        </span>
+      ),
     },
     { key: 'rsvp', header: 'RSVP', sortValue: (i) => i.rsvp, render: (i) => <RsvpBadge status={i.rsvp} /> },
     {
       key: 'checkin',
       header: 'Check-in',
       sortValue: (i) => i.checkIn,
-      render: (i) => <CheckInBadge status={i.checkIn} />,
+      render: (i) => (
+        <span
+          title={
+            i.checkedInAt
+              ? `${formatDateTime(i.checkedInAt)}${i.checkedInBy ? ` by ${i.checkedInBy.name}` : ''}`
+              : undefined
+          }
+        >
+          <CheckInBadge status={i.checkIn} />
+        </span>
+      ),
     },
     { key: 'phone', header: 'Phone', render: (i) => i.phone || <Muted>—</Muted> },
     { key: 'company', header: 'Company', sortValue: (i) => i.company, render: (i) => i.company || '—' },
@@ -213,6 +234,19 @@ const EventDetails = () => {
     { key: 'template', header: 'Template', render: (l) => getTemplate(l.templateId).name },
     { key: 'recipients', header: 'Recipients', align: 'center', render: (l) => l.recipientCount },
     {
+      key: 'delivered',
+      header: 'Delivered',
+      align: 'center',
+      render: (l) =>
+        l.failedCount ? (
+          <Badge tone="danger">
+            {l.sentCount} sent · {l.failedCount} failed
+          </Badge>
+        ) : (
+          <Badge tone="success">{l.sentCount} sent</Badge>
+        ),
+    },
+    {
       key: 'qr',
       header: 'QR Attached',
       render: (l) => (l.includeQr ? <Badge tone="success">Yes</Badge> : <Badge>No</Badge>),
@@ -226,11 +260,16 @@ const EventDetails = () => {
         back={{ to: ROUTES.EVENTS, label: 'All events' }}
         title={event.title}
         badge={<EventStatusBadge status={event.status} />}
-        subtitle={`${event.category} · Organized by ${event.organizer}`}
+        subtitle={`${event.category}${event.organizer ? ` · Organized by ${event.organizer}` : ''}${
+          event.createdBy ? ` · Planner: ${event.createdBy.name}` : ''
+        }`}
         actions={
           <>
             <Button variant="secondary" onClick={() => setEditingEvent(true)}>
               <Pencil /> Edit
+            </Button>
+            <Button variant="secondary" onClick={() => navigate(scanPath(event.id))}>
+              <ScanLine /> Open Scanner
             </Button>
             <Button variant="secondary" onClick={() => setImporting(true)}>
               <FileUp /> Import CSV
@@ -262,10 +301,8 @@ const EventDetails = () => {
         <InfoTile>
           <MapPin />
           <div>
-            <small>Venue</small>
-            <strong>
-              {event.venue}, {event.city}
-            </strong>
+            <small>Address</small>
+            <strong>{event.address}</strong>
           </div>
         </InfoTile>
         <InfoTile>
@@ -317,11 +354,17 @@ const EventDetails = () => {
         <StatCard
           label="Checked In"
           value={checkedInCount}
-          hint="Updated by QR scanner"
+          hint={`${eventInvitees.length - checkedInCount} not arrived yet`}
           icon={<QrCode />}
           tone="accent"
         />
       </StatsGrid>
+
+      <Section>
+        <EventScannersCard event={event} />
+      </Section>
+
+      <CheckInActivityCard eventId={event.id} onRefresh={() => refreshEventInvitees(event.id)} />
 
       <Section>
         <Card $padded={false}>
@@ -361,6 +404,7 @@ const EventDetails = () => {
                 <option value="">All invitations</option>
                 <option value="sent">Sent</option>
                 <option value="not_sent">Not sent</option>
+                <option value="failed">Failed</option>
               </Select>
               <Select value={rsvpFilter} onChange={(e) => setRsvpFilter(e.target.value)} aria-label="RSVP">
                 <option value="">All RSVP</option>
@@ -393,7 +437,7 @@ const EventDetails = () => {
             selectedIds={selected}
             onSelectionChange={setSelected}
             onRowClick={(i) => setQrFor(i)}
-            minWidth="1640px"
+            minWidth="1280px"
             empty={
               eventInvitees.length === 0
                 ? {
@@ -440,9 +484,13 @@ const EventDetails = () => {
         message="Their QR tickets will stop working. This cannot be undone."
         confirmLabel="Delete"
         onConfirm={() => {
-          deleteInvitees(toDelete);
-          setSelected((s) => s.filter((id) => !toDelete.includes(id)));
-          toast.success(toDelete.length > 1 ? `${toDelete.length} invitees deleted` : 'Invitee deleted');
+          const ids = toDelete;
+          deleteInvitees(ids)
+            .then((n) => {
+              setSelected((s) => s.filter((id) => !ids.includes(id)));
+              toast.success(n === 1 ? 'Invitee deleted' : `${n} invitees deleted`);
+            })
+            .catch((err) => toast.error(errorMessage(err)));
         }}
         onClose={() => setToDelete([])}
       />
@@ -450,22 +498,31 @@ const EventDetails = () => {
       <Modal
         open={regenOpen}
         onClose={() => setRegenOpen(false)}
+        locked={regenerating}
         size="xl"
         title="Change QR Type"
         subtitle="All tickets for this event will be regenerated with new unique codes."
         footer={
           <>
-            <Button variant="secondary" onClick={() => setRegenOpen(false)}>
+            <Button variant="secondary" onClick={() => setRegenOpen(false)} disabled={regenerating}>
               Cancel
             </Button>
             <Button
               variant="danger"
               disabled={!regenType}
-              onClick={() => {
+              loading={regenerating}
+              onClick={async () => {
                 if (!regenType) return;
-                regenerateQrCodes(event.id, regenType);
-                setRegenOpen(false);
-                toast.success(`${eventInvitees.length} QR tickets regenerated`);
+                setRegenerating(true);
+                try {
+                  const n = await regenerateQrCodes(event.id, regenType);
+                  setRegenOpen(false);
+                  toast.success(`${n} QR tickets regenerated`);
+                } catch (err) {
+                  toast.error(errorMessage(err));
+                } finally {
+                  setRegenerating(false);
+                }
               }}
             >
               <RefreshCw /> Regenerate {eventInvitees.length} tickets

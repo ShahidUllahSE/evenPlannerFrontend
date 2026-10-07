@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Eye, Mail, Send } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Eye, Mail, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/common/Button';
@@ -12,8 +12,9 @@ import RichTextEditor from '@/components/email/RichTextEditor';
 import TemplatePicker from '@/components/email/TemplatePicker';
 import { INVITEE_CATEGORIES } from '@/constants/options';
 import { eventDetailsPath } from '@/constants/routes';
-import { useData } from '@/context/DataContext';
+import { useData, type SendEmailResult } from '@/context/DataContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { errorMessage } from '@/services/api';
 import type { EmailTemplateId } from '@/types/email';
 import type { EventItem } from '@/types/event';
 import type { Invitee } from '@/types/invitee';
@@ -56,8 +57,7 @@ const buildVars = (event: EventItem, guest: typeof SAMPLE_GUEST): TemplateVars =
   eventTitle: event.title,
   eventDate: formatDate(event.date),
   eventTime: `${formatTime(event.startTime)} – ${formatTime(event.endTime)}`,
-  venue: event.venue,
-  city: event.city,
+  address: event.address,
   organizer: event.organizer,
 });
 
@@ -66,7 +66,7 @@ const ComposeEmail = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [params, setParams] = useSearchParams();
-  const { events, invitees, recordEmailSent } = useData();
+  const { events, invitees, sendEmails } = useData();
 
   const presetIds = (location.state as { inviteeIds?: string[] } | null)?.inviteeIds ?? [];
   const eventsWithGuests = events.filter((e) => invitees.some((i) => i.eventId === e.id));
@@ -84,6 +84,7 @@ const ComposeEmail = () => {
   const [qr, setQr] = useState<{ key: string; url: string } | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [sending, setSending] = useState<{ progress: number; done: boolean } | null>(null);
+  const [result, setResult] = useState<SendEmailResult | null>(null);
 
   const event = events.find((e) => e.id === eventId);
   const eventInvitees = useMemo(() => invitees.filter((i) => i.eventId === eventId), [invitees, eventId]);
@@ -91,7 +92,7 @@ const ComposeEmail = () => {
   const recipients = useMemo(() => {
     switch (mode) {
       case 'not_sent':
-        return eventInvitees.filter((i) => i.emailStatus === 'not_sent');
+        return eventInvitees.filter((i) => i.emailStatus !== 'sent');
       case 'selected':
         return eventInvitees.filter((i) => selectedIds.includes(i.id));
       case 'category':
@@ -137,25 +138,32 @@ const ComposeEmail = () => {
 
   const canSend = !!event && recipients.length > 0 && subject.trim().length > 0;
 
-  const send = () => {
+  const send = async () => {
     if (!event) return;
-    setSending({ progress: 0, done: false });
-    const total = recipients.length;
-    let current = 0;
-    // Simulated delivery until the email backend exists.
-    const timer = window.setInterval(() => {
-      current = Math.min(total, current + Math.max(1, Math.ceil(total / 20)));
-      setSending({ progress: Math.round((current / total) * 100), done: false });
-      if (current >= total) {
-        window.clearInterval(timer);
-        recordEmailSent(
-          { eventId: event.id, subject, templateId, recipientCount: total, includeQr },
-          recipients.map((r) => r.id),
-        );
-        setSending({ progress: 100, done: true });
-        toast.success(`Invitations sent to ${total} guests`);
-      }
-    }, 60);
+    setSending({ progress: 5, done: false });
+    // The server sends every email before replying; ease the bar towards 90% meanwhile.
+    const timer = window.setInterval(
+      () => setSending((s) => (s && !s.done ? { ...s, progress: Math.min(90, s.progress + (90 - s.progress) * 0.08) } : s)),
+      200,
+    );
+    try {
+      const res = await sendEmails(event.id, {
+        inviteeIds: recipients.map((r) => r.id),
+        subject,
+        bodyHtml: body,
+        templateId,
+        includeQr,
+      });
+      setResult(res);
+      setSending({ progress: 100, done: true });
+      if (res.failed.length) toast.error(`${res.failed.length} emails could not be delivered`);
+      else toast.success(`Invitations sent to ${res.sent} guests`);
+    } catch (err) {
+      toast.error(errorMessage(err, 'Could not send the emails'));
+      setSending(null);
+    } finally {
+      window.clearInterval(timer);
+    }
   };
 
   if (events.length === 0 || eventsWithGuests.length === 0) {
@@ -199,7 +207,7 @@ const ComposeEmail = () => {
                 <Select value={mode} onChange={(e) => setMode(e.target.value as RecipientMode)}>
                   <option value="all">All invitees ({eventInvitees.length})</option>
                   <option value="not_sent">
-                    Not invited yet ({eventInvitees.filter((i) => i.emailStatus === 'not_sent').length})
+                    Not invited yet / failed ({eventInvitees.filter((i) => i.emailStatus !== 'sent').length})
                   </option>
                   <option value="category">By category</option>
                   {selectedIds.length > 0 && (
@@ -290,10 +298,11 @@ const ComposeEmail = () => {
         onClose={() => {
           setConfirmOpen(false);
           setSending(null);
+          setResult(null);
         }}
         locked={!!sending && !sending.done}
         size="sm"
-        title={sending?.done ? 'Invitations sent' : 'Send invitations?'}
+        title={sending?.done ? (result?.failed.length ? 'Sent with some failures' : 'Invitations sent') : 'Send invitations?'}
         footer={
           sending?.done ? (
             <Button onClick={() => event && navigate(eventDetailsPath(event.id))}>
@@ -311,15 +320,30 @@ const ComposeEmail = () => {
           )
         }
       >
-        {sending?.done ? (
-          <EmptyState
-            icon={<CheckCircle2 />}
-            title={`${recipients.length} emails delivered`}
-            description="Guests are now marked as invited on the event page."
-          />
+        {sending?.done && result ? (
+          <>
+            <EmptyState
+              icon={result.failed.length ? <AlertTriangle /> : <CheckCircle2 />}
+              title={`${result.sent} email${result.sent === 1 ? '' : 's'} delivered`}
+              description={
+                result.failed.length
+                  ? `${result.failed.length} failed. They are marked "Failed" on the event page so you can retry.`
+                  : 'Guests are now marked as invited on the event page.'
+              }
+            />
+            {result.failed.length > 0 && (
+              <ul style={{ fontSize: 13, color: '#B91C1C', paddingLeft: 18, maxHeight: 160, overflowY: 'auto' }}>
+                {result.failed.slice(0, 20).map((f) => (
+                  <li key={f.inviteeId}>
+                    {f.email}: {f.error}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         ) : sending ? (
           <>
-            <p style={{ marginBottom: 12 }}>Sending personalised emails… {sending.progress}%</p>
+            <p style={{ marginBottom: 12 }}>Sending {recipients.length} personalised emails… please keep this page open.</p>
             <ProgressBar $pct={sending.progress} />
           </>
         ) : (

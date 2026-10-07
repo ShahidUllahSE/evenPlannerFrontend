@@ -1,11 +1,10 @@
-﻿import { useEffect, useRef, useState } from 'react';
-import { CalendarDays, ChevronDown, LogOut, Menu, RotateCcw } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useEffect, useRef, useState } from 'react';
+import { CalendarDays, ChevronDown, KeyRound, LogOut, Menu } from 'lucide-react';
 import styled from 'styled-components';
 import Avatar from '@/components/common/Avatar';
-import ConfirmDialog from '@/components/common/ConfirmDialog';
+import ChangePasswordModal from '@/components/account/ChangePasswordModal';
+import { ROLE_LABELS } from '@/constants/auth';
 import { useAuth } from '@/context/AuthContext';
-import { useData } from '@/context/DataContext';
 
 const Bar = styled.header`
   position: sticky;
@@ -152,9 +151,8 @@ const MenuItem = styled.button<{ $danger?: boolean }>`
 
 const Topbar = ({ onMenuClick }: { onMenuClick: () => void }) => {
   const { user, logout } = useAuth();
-  const { resetDemoData } = useData();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [confirmReset, setConfirmReset] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -194,15 +192,17 @@ const Topbar = ({ onMenuClick }: { onMenuClick: () => void }) => {
             <Dropdown>
               <MenuHead>
                 <strong>{user.name}</strong>
-                <span>{user.role}</span>
+                <span>
+                  {ROLE_LABELS[user.role]} · {user.email}
+                </span>
               </MenuHead>
               <MenuItem
                 onClick={() => {
                   setMenuOpen(false);
-                  setConfirmReset(true);
+                  setPasswordOpen(true);
                 }}
               >
-                <RotateCcw /> Reset demo data
+                <KeyRound /> Change password
               </MenuItem>
               <MenuItem $danger onClick={logout}>
                 <LogOut /> Log out
@@ -211,17 +211,7 @@ const Topbar = ({ onMenuClick }: { onMenuClick: () => void }) => {
           )}
         </UserWrap>
       )}
-      <ConfirmDialog
-        open={confirmReset}
-        title="Reset demo data?"
-        message="All events, invitees and email history will be replaced with the original sample data."
-        confirmLabel="Reset data"
-        onConfirm={() => {
-          resetDemoData();
-          toast.success('Demo data restored');
-        }}
-        onClose={() => setConfirmReset(false)}
-      />
+      <ChangePasswordModal open={passwordOpen} onClose={() => setPasswordOpen(false)} />
     </Bar>
   );
 };

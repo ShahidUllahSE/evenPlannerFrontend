@@ -8,8 +8,7 @@ export interface TemplateVars {
   eventTitle: string;
   eventDate: string;
   eventTime: string;
-  venue: string;
-  city: string;
+  address: string;
   ticketCode: string;
   organizer: string;
 }
@@ -21,8 +20,7 @@ export const PLACEHOLDERS: { key: keyof TemplateVars; label: string }[] = [
   { key: 'eventTitle', label: 'Event title' },
   { key: 'eventDate', label: 'Event date' },
   { key: 'eventTime', label: 'Event time' },
-  { key: 'venue', label: 'Venue' },
-  { key: 'city', label: 'City' },
+  { key: 'address', label: 'Address' },
   { key: 'ticketCode', label: 'Ticket code' },
   { key: 'organizer', label: 'Organizer' },
 ];
@@ -166,7 +164,7 @@ export const renderEmail = (templateId: EmailTemplateId, { bodyHtml, vars, qrDat
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #E9DDBE;border-bottom:1px solid #E9DDBE;padding:10px 0;">
               ${detailRow('Date', v.eventDate, '#A8842B', '#0F1B2D')}
               ${detailRow('Time', v.eventTime, '#A8842B', '#0F1B2D')}
-              ${detailRow('Venue', `${v.venue}, ${v.city}`, '#A8842B', '#0F1B2D')}
+              ${detailRow('Address', v.address, '#A8842B', '#0F1B2D')}
             </table>
           </td></tr>
           <tr><td style="padding:0 40px 36px;">${qrBlock(qrDataUrl, v.ticketCode, '#D4A437', '#0F1B2D')}</td></tr>
@@ -188,7 +186,7 @@ export const renderEmail = (templateId: EmailTemplateId, { bodyHtml, vars, qrDat
               <tr>
                 <td style="padding:14px 16px;${FONT}width:33%;"><div style="font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:.06em;">Date</div><div style="font-size:14px;font-weight:600;color:#16202E;margin-top:2px;">${v.eventDate}</div></td>
                 <td style="padding:14px 16px;${FONT}width:33%;border-left:1px solid #E3E8EF;"><div style="font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:.06em;">Time</div><div style="font-size:14px;font-weight:600;color:#16202E;margin-top:2px;">${v.eventTime}</div></td>
-                <td style="padding:14px 16px;${FONT}width:34%;border-left:1px solid #E3E8EF;"><div style="font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:.06em;">Venue</div><div style="font-size:14px;font-weight:600;color:#16202E;margin-top:2px;">${v.venue}</div></td>
+                <td style="padding:14px 16px;${FONT}width:34%;border-left:1px solid #E3E8EF;"><div style="font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:.06em;">Address</div><div style="font-size:14px;font-weight:600;color:#16202E;margin-top:2px;">${v.address}</div></td>
               </tr>
             </table>
           </td></tr>
@@ -210,7 +208,7 @@ export const renderEmail = (templateId: EmailTemplateId, { bodyHtml, vars, qrDat
           </td></tr>
           <tr><td style="padding:36px 40px 4px;">${content}</td></tr>
           <tr><td style="padding:0 40px;text-align:center;">
-            <div style="display:inline-block;background:#FFF3E8;border-radius:999px;padding:10px 20px;${FONT}font-size:14px;color:#B4532F;font-weight:600;">📍 ${v.venue}, ${v.city}</div>
+            <div style="display:inline-block;background:#FFF3E8;border-radius:999px;padding:10px 20px;${FONT}font-size:14px;color:#B4532F;font-weight:600;">📍 ${v.address}</div>
           </td></tr>
           <tr><td style="padding:0 40px 36px;">${qrBlock(qrDataUrl, v.ticketCode, '#E8795A', '#B4532F')}</td></tr>
         </table>

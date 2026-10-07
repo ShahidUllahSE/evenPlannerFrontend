@@ -115,8 +115,10 @@ export const FullRow = styled.div`
 
 const SearchWrapper = styled.div`
   position: relative;
+  flex: 1 1 220px;
   width: 100%;
-  max-width: 320px;
+  min-width: 180px;
+  max-width: 360px;
 
   svg {
     position: absolute;
@@ -131,6 +133,11 @@ const SearchWrapper = styled.div`
 
   input {
     padding-left: 36px;
+  }
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    flex: 1 1 100%;
+    max-width: none;
   }
 `;
 

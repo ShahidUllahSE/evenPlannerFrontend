@@ -8,6 +8,7 @@ import Modal from '@/components/common/Modal';
 import { CategoryBadge } from '@/components/common/StatusBadges';
 import QrTypePicker from '@/components/qr/QrTypePicker';
 import { useData } from '@/context/DataContext';
+import { errorMessage } from '@/services/api';
 import type { EventItem } from '@/types/event';
 import type { QrType } from '@/types/qr';
 import { buildSampleCsv, CSV_COLUMNS, parseInviteeCsv, type ParsedRow } from '@/utils/csv';
@@ -279,6 +280,7 @@ const CsvImportWizard = ({ event, onClose }: Omit<CsvImportModalProps, 'open'>) 
   const [qrType, setQrType] = useState<QrType | null>(event.qrType);
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
+  const [created, setCreated] = useState(0);
 
   const validRows = rows.filter((r) => r.status === 'valid');
   const invalidCount = rows.filter((r) => r.status === 'invalid').length;
@@ -315,26 +317,29 @@ const CsvImportWizard = ({ event, onClose }: Omit<CsvImportModalProps, 'open'>) 
     handleFile(e.dataTransfer.files[0]);
   };
 
-  const generate = () => {
+  const generate = async () => {
     if (!qrType) return;
     setStep('generate');
-    const total = validRows.length;
-    let current = 0;
-    // Visual progress; the actual generation is instant on the client.
-    const timer = window.setInterval(() => {
-      current = Math.min(total, current + Math.max(1, Math.ceil(total / 25)));
-      setProgress(Math.round((current / total) * 100));
-      if (current >= total) {
-        window.clearInterval(timer);
-        importInvitees(
-          event.id,
-          validRows.map((r) => r.data),
-          qrType,
-        );
-        setDone(true);
-        toast.success(`${total} invitees imported with unique QR tickets`);
-      }
-    }, 40);
+    // The server signs every ticket; the bar eases towards 90% while it works.
+    setProgress(5);
+    const timer = window.setInterval(() => setProgress((p) => Math.min(90, p + (90 - p) * 0.15)), 150);
+    try {
+      const res = await importInvitees(
+        event.id,
+        validRows.map((r) => r.data),
+        qrType,
+      );
+      setCreated(res.created);
+      setProgress(100);
+      setDone(true);
+      const skipped = res.skipped.length ? ` (${res.skipped.length} already invited, skipped)` : '';
+      toast.success(`${res.created} invitees imported with unique QR tickets${skipped}`);
+    } catch (err) {
+      toast.error(errorMessage(err, 'Import failed'));
+      setStep('qr');
+    } finally {
+      window.clearInterval(timer);
+    }
   };
 
   const footer = (() => {
@@ -536,7 +541,7 @@ const CsvImportWizard = ({ event, onClose }: Omit<CsvImportModalProps, 'open'>) 
           {done ? (
             <>
               <CheckCircle2 />
-              <h4>{validRows.length} QR tickets generated</h4>
+              <h4>{created} QR tickets generated</h4>
               <p>
                 Every invitee now has a unique {qrType && QR_TYPES[qrType].label} code. You can send invitations
                 from the event page.
@@ -545,9 +550,7 @@ const CsvImportWizard = ({ event, onClose }: Omit<CsvImportModalProps, 'open'>) 
           ) : (
             <>
               <h4>Generating unique QR codes…</h4>
-              <p>
-                {Math.round((progress / 100) * validRows.length)} of {validRows.length}
-              </p>
+              <p>Creating {validRows.length} signed tickets on the server</p>
               <Bar $pct={progress} />
             </>
           )}

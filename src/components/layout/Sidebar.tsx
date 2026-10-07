@@ -1,7 +1,19 @@
-import { CalendarDays, LayoutDashboard, LogOut, Mail, ScanLine, Users } from 'lucide-react';
+import {
+  CalendarDays,
+  History,
+  LayoutDashboard,
+  LogOut,
+  Mail,
+  Phone,
+  ScanLine,
+  Settings,
+  ShieldCheck,
+  Users,
+} from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import styled from 'styled-components';
 import Avatar from '@/components/common/Avatar';
+import { ROLE_LABELS } from '@/constants/auth';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/context/AuthContext';
 import Logo from './Logo';
@@ -97,24 +109,6 @@ const Item = styled(NavLink)`
   }
 `;
 
-const DisabledItem = styled.div`
-  ${itemStyles}
-  opacity: 0.5;
-  cursor: not-allowed;
-
-  span {
-    margin-left: auto;
-    font-size: 0.625rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: rgba(212, 164, 55, 0.18);
-    color: ${({ theme }) => theme.colors.accent};
-  }
-`;
-
 const UserBox = styled.div`
   display: flex;
   align-items: center;
@@ -165,11 +159,16 @@ const LogoutButton = styled.button`
   }
 `;
 
-const NAV_ITEMS = [
+const MANAGER_MENU = [
   { to: ROUTES.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
   { to: ROUTES.EVENTS, label: 'Events', icon: CalendarDays },
-  { to: ROUTES.USERS, label: 'All Users', icon: Users },
+  { to: ROUTES.USERS, label: 'All Guests', icon: Users },
   { to: ROUTES.COMPOSE, label: 'Send Email', icon: Mail },
+];
+
+const EVENT_DAY_MENU = [
+  { to: ROUTES.SCAN, label: 'QR Scanner', icon: ScanLine },
+  { to: ROUTES.SCAN_HISTORY, label: 'Scan History', icon: History },
 ];
 
 interface SidebarProps {
@@ -178,7 +177,7 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ open, onNavigate }: SidebarProps) => {
-  const { user, logout } = useAuth();
+  const { user, isManager, logout } = useAuth();
 
   return (
     <Aside $open={open}>
@@ -186,26 +185,52 @@ const Sidebar = ({ open, onNavigate }: SidebarProps) => {
         <Logo light />
       </Brand>
       <Nav>
-        <SectionLabel>Main Menu</SectionLabel>
-        {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+        {isManager && (
+          <>
+            <SectionLabel>Main Menu</SectionLabel>
+            {MANAGER_MENU.map(({ to, label, icon: Icon }) => (
+              <Item key={to} to={to} onClick={onNavigate}>
+                <Icon />
+                {label}
+              </Item>
+            ))}
+          </>
+        )}
+        <SectionLabel>Event Day</SectionLabel>
+        {EVENT_DAY_MENU.map(({ to, label, icon: Icon }) => (
           <Item key={to} to={to} onClick={onNavigate}>
             <Icon />
             {label}
           </Item>
         ))}
-        <SectionLabel>Event Day</SectionLabel>
-        <DisabledItem title="QR scanning will be added in the next phase">
-          <ScanLine />
-          QR Scanner
-          <span>Soon</span>
-        </DisabledItem>
+        {isManager && (
+          <>
+            <SectionLabel>Administration</SectionLabel>
+            <Item to={ROUTES.TEAM} onClick={onNavigate}>
+              <ShieldCheck />
+              {user?.role === 'admin' ? 'Accounts' : 'My Scanners'}
+            </Item>
+            {user?.role === 'admin' && (
+              <>
+                <Item to={ROUTES.EMAIL_SETTINGS} onClick={onNavigate}>
+                  <Settings />
+                  Email Settings
+                </Item>
+                <Item to={ROUTES.TWILIO_SETTINGS} onClick={onNavigate}>
+                  <Phone />
+                  Twilio Settings
+                </Item>
+              </>
+            )}
+          </>
+        )}
       </Nav>
       {user && (
         <UserBox>
           <Avatar name={user.name} size={36} />
           <UserText>
             <strong>{user.name}</strong>
-            <span>{user.email}</span>
+            <span>{ROLE_LABELS[user.role]}</span>
           </UserText>
           <LogoutButton onClick={logout} aria-label="Log out" title="Log out">
             <LogOut />

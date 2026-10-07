@@ -5,6 +5,7 @@ import { Field, FormGrid, Input, Select } from '@/components/common/Form';
 import Modal from '@/components/common/Modal';
 import { INVITEE_CATEGORIES } from '@/constants/options';
 import { useData, type InviteeUpdate } from '@/context/DataContext';
+import { errorMessage } from '@/services/api';
 import type { Invitee, InviteeInput } from '@/types/invitee';
 
 type Values = Required<InviteeUpdate>;
@@ -34,17 +35,18 @@ const InviteeFormFields = ({ eventId, invitee, onClose }: Omit<InviteeFormModalP
     checkIn: invitee?.checkIn ?? 'not_checked_in',
   });
   const [errors, setErrors] = useState<Errors>({});
+  const [saving, setSaving] = useState(false);
 
   const set = <K extends keyof Values>(key: K, value: Values[K]) => {
     setValues((v) => ({ ...v, [key]: value }));
     setErrors((e) => ({ ...e, [key]: undefined }));
   };
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     const email = values.email.trim().toLowerCase();
     const found: Errors = {};
-    if (!values.name.trim()) found.name = 'Name is required';
+    if (values.name.trim().length < 2) found.name = 'Name is required';
     if (!EMAIL_RE.test(email)) found.email = 'Enter a valid email';
     else if (
       invitees.some((i) => i.eventId === eventId && i.email === email && i.id !== invitee?.id)
@@ -54,21 +56,28 @@ const InviteeFormFields = ({ eventId, invitee, onClose }: Omit<InviteeFormModalP
     if (Object.keys(found).length) return;
 
     const data = { ...values, name: values.name.trim(), email };
-    if (isEdit) {
-      updateInvitee(invitee.id, data);
-      toast.success('Invitee updated');
-    } else {
-      const { rsvp: _r, checkIn: _c, ...input } = data;
-      addInvitee(eventId, input as InviteeInput);
-      toast.success('Invitee added with a unique QR ticket');
+    setSaving(true);
+    try {
+      if (isEdit) {
+        await updateInvitee(invitee.id, data);
+        toast.success('Invitee updated');
+      } else {
+        const { rsvp: _r, checkIn: _c, ...input } = data;
+        await addInvitee(eventId, input as InviteeInput);
+        toast.success('Invitee added with a unique QR ticket');
+      }
+      onClose();
+    } catch (err) {
+      toast.error(errorMessage(err));
+      setSaving(false);
     }
-    onClose();
   };
 
   return (
     <Modal
       open
       onClose={onClose}
+      locked={saving}
       size="lg"
       title={isEdit ? 'Edit Invitee' : 'Add Invitee'}
       subtitle={
@@ -76,10 +85,10 @@ const InviteeFormFields = ({ eventId, invitee, onClose }: Omit<InviteeFormModalP
       }
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" form="invitee-form">
+          <Button type="submit" form="invitee-form" loading={saving}>
             {isEdit ? 'Save Changes' : 'Add Invitee'}
           </Button>
         </>
@@ -135,7 +144,11 @@ const InviteeFormFields = ({ eventId, invitee, onClose }: Omit<InviteeFormModalP
             </Field>
           )}
           {isEdit && (
-            <Field label="Check-in" hint="Will be set automatically by the QR scanner later.">
+            <Field label="Check-in" hint={
+                invitee.checkedInBy
+                  ? `Checked in by ${invitee.checkedInBy.name}. Set automatically when the ticket is scanned.`
+                  : 'Set automatically when the ticket is scanned. Change it here for a manual check-in.'
+              }>
               <Select
                 value={values.checkIn}
                 onChange={(e) => set('checkIn', e.target.value as Values['checkIn'])}
