@@ -169,6 +169,13 @@ const Scanner = () => {
   const { videoRef, state: cameraState, error: cameraError, start: startCamera, stop: stopCamera } =
     useQrCamera(onDetect);
 
+  // Auto-start camera when an event is first selected.
+  useEffect(() => {
+    if (!event) return;
+    void startCamera();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when event id changes
+  }, [event?.id]);
+
   const pickEvent = (id: string) => {
     setEventId(id);
     setCurrent(null);
@@ -237,13 +244,16 @@ const Scanner = () => {
           </Card>
 
           <Viewport>
-            <video ref={videoRef} muted playsInline />
+            <video ref={videoRef} muted playsInline autoPlay disablePictureInPicture />
             {cameraState === 'running' ? (
               <Frame />
             ) : (
               <CameraOff>
                 {cameraState === 'error' ? <CameraOffIcon /> : <Camera />}
-                <p>{cameraError || 'Point the camera at the QR code on the guest’s invitation.'}</p>
+                <p>
+                  {cameraError ||
+                    'Point the camera at the QR code. Hold steady 15–20 cm away — use HTTPS on mobile for best results.'}
+                </p>
                 <Button onClick={startCamera} loading={cameraState === 'starting'} disabled={!event}>
                   <Camera /> {cameraState === 'error' ? 'Try again' : 'Start camera'}
                 </Button>

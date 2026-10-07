@@ -3,9 +3,9 @@ import jsQR from 'jsqr';
 
 export type CameraState = 'idle' | 'starting' | 'running' | 'error';
 
-/** Frames are shrunk to this width before decoding; plenty for a ticket held up to the camera. */
-const DECODE_WIDTH = 640;
-const DECODE_INTERVAL_MS = 120;
+/** Decode at a higher res on phones — small printed / on-screen tickets need it. */
+const DECODE_WIDTH = 960;
+const DECODE_INTERVAL_MS = 80;
 
 const describeError = (err: unknown) => {
   if (!window.isSecureContext) {
@@ -18,15 +18,31 @@ const describeError = (err: unknown) => {
   return 'Could not start the camera.';
 };
 
+type BarcodeDetectorLike = {
+  detect: (source: ImageBitmapSource) => Promise<Array<{ rawValue?: string }>>;
+};
+
+const getBarcodeDetector = (): BarcodeDetectorLike | null => {
+  const BD = (window as unknown as { BarcodeDetector?: new (opts: { formats: string[] }) => BarcodeDetectorLike })
+    .BarcodeDetector;
+  if (!BD) return null;
+  try {
+    return new BD({ formats: ['qr_code'] });
+  } catch {
+    return null;
+  }
+};
+
 /**
  * Streams the rear camera into `videoRef` and calls `onDetect` with the text of every QR code it sees.
- * The caller decides what to do with repeats.
+ * Uses BarcodeDetector when available (better on Android Chrome), otherwise jsQR with invert attempts.
  */
 export const useQrCamera = (onDetect: (text: string) => void) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const frameRef = useRef<number>(0);
   const onDetectRef = useRef(onDetect);
+  const detectorRef = useRef<BarcodeDetectorLike | null>(null);
   const [state, setState] = useState<CameraState>('idle');
   const [error, setError] = useState('');
 
@@ -52,10 +68,23 @@ export const useQrCamera = (onDetect: (text: string) => void) => {
     }
     setState('starting');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false,
-      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          } as MediaTrackConstraints,
+          audio: false,
+        });
+      } catch {
+        // Fall back if advanced constraints fail (common on iOS).
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+          audio: false,
+        });
+      }
       streamRef.current = stream;
       const video = videoRef.current;
       if (!video) {
@@ -63,24 +92,56 @@ export const useQrCamera = (onDetect: (text: string) => void) => {
         streamRef.current = null;
         return;
       }
+      video.setAttribute('playsinline', 'true');
+      video.setAttribute('webkit-playsinline', 'true');
+      video.muted = true;
       video.srcObject = stream;
       await video.play();
       setState('running');
 
+      detectorRef.current = getBarcodeDetector();
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       let last = 0;
-      const tick = (now: number) => {
+      let detecting = false;
+
+      const tick = async (now: number) => {
         frameRef.current = requestAnimationFrame(tick);
-        if (!ctx || now - last < DECODE_INTERVAL_MS || video.readyState < video.HAVE_ENOUGH_DATA) return;
+        if (!ctx || detecting || now - last < DECODE_INTERVAL_MS || video.readyState < video.HAVE_ENOUGH_DATA) {
+          return;
+        }
         last = now;
-        const scale = Math.min(1, DECODE_WIDTH / video.videoWidth);
-        canvas.width = Math.round(video.videoWidth * scale);
-        canvas.height = Math.round(video.videoHeight * scale);
+
+        const vw = video.videoWidth;
+        const vh = video.videoHeight;
+        if (!vw || !vh) return;
+
+        const scale = Math.min(1, DECODE_WIDTH / vw);
+        canvas.width = Math.max(1, Math.round(vw * scale));
+        canvas.height = Math.max(1, Math.round(vh * scale));
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(image.data, image.width, image.height, { inversionAttempts: 'dontInvert' });
-        if (code?.data) onDetectRef.current(code.data);
+
+        detecting = true;
+        try {
+          const detector = detectorRef.current;
+          if (detector) {
+            const codes = await detector.detect(canvas);
+            const value = codes[0]?.rawValue?.trim();
+            if (value) {
+              onDetectRef.current(value);
+              return;
+            }
+          }
+
+          const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          // attemptBoth: needed for screen glare / light-on-dark prints
+          const code = jsQR(image.data, image.width, image.height, {
+            inversionAttempts: 'attemptBoth',
+          });
+          if (code?.data) onDetectRef.current(code.data.trim());
+        } finally {
+          detecting = false;
+        }
       };
       frameRef.current = requestAnimationFrame(tick);
     } catch (err) {
@@ -91,7 +152,6 @@ export const useQrCamera = (onDetect: (text: string) => void) => {
     }
   }, []);
 
-  // Release the camera when the page closes.
   useEffect(() => stop, [stop]);
 
   return { videoRef, state, error, start, stop };
