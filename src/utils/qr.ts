@@ -98,8 +98,7 @@ export const renderQrDataUrl = async (type: QrType, payload: string, size = 240)
   const canvas = document.createElement('canvas');
   await QRCode.toCanvas(canvas, payload, {
     width: size,
-    // Wider quiet zone — phones scan Standard tickets more reliably
-    margin: 3,
+    margin: 1,
     errorCorrectionLevel: config.errorLevel,
     color: { dark: config.dark, light: config.light },
   });
