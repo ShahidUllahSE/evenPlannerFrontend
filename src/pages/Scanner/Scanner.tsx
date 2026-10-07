@@ -24,6 +24,7 @@ import {
   Layout,
   ManualForm,
   RecentList,
+  ResultOverlay,
   ResultPanel,
   Viewport,
   Waiting,
@@ -31,10 +32,10 @@ import {
 } from './Scanner.styles';
 
 const LAST_EVENT_KEY = 'eventsphere_scanner_event';
-/** How long a result stays on screen before the scanner is ready again. */
-const RESULT_MS = 3500;
-/** The same code held in front of the camera is ignored for this long. */
-const REPEAT_MS = 5000;
+/** How long the result stays on screen before auto-clear (staff can tap Next sooner). */
+const RESULT_MS = 6000;
+/** Ignore the same payload for this long even after the overlay closes. */
+const REPEAT_MS = 12000;
 const OPEN_STATUSES = new Set(['upcoming', 'ongoing']);
 
 const VERDICT: Record<ScanResult, Verdict> = {
@@ -46,11 +47,11 @@ const VERDICT: Record<ScanResult, Verdict> = {
 };
 
 const HEADLINE: Record<ScanResult, string> = {
-  valid: 'Admit guest',
-  already_used: 'Already checked in',
-  invalid: 'Invalid ticket',
-  wrong_event: 'Wrong event',
-  event_closed: 'Check-in closed',
+  valid: 'ADMITTED',
+  already_used: 'ALREADY USED',
+  invalid: 'INVALID TICKET',
+  wrong_event: 'WRONG EVENT',
+  event_closed: 'CHECK-IN CLOSED',
 };
 
 interface SessionScan extends ScanResponse {
@@ -99,6 +100,8 @@ const Scanner = () => {
   const [busy, setBusy] = useState(false);
 
   const busyRef = useRef(false);
+  /** While true, camera detections are ignored (result overlay is up). */
+  const pausedRef = useRef(false);
   const lastRef = useRef({ text: '', at: 0 });
   const clearTimer = useRef<number>(0);
 
@@ -120,23 +123,38 @@ const Scanner = () => {
 
   useEffect(() => () => window.clearTimeout(clearTimer.current), []);
 
+  const clearResult = useCallback(() => {
+    window.clearTimeout(clearTimer.current);
+    pausedRef.current = false;
+    setCurrent(null);
+  }, []);
+
+  const showResult = useCallback((scan: SessionScan) => {
+    pausedRef.current = true;
+    setCurrent(scan);
+    setHistory((h) => [scan, ...h].slice(0, 30));
+    window.clearTimeout(clearTimer.current);
+    clearTimer.current = window.setTimeout(() => {
+      pausedRef.current = false;
+      setCurrent(null);
+    }, RESULT_MS);
+  }, []);
+
   const submit = useCallback(
     async (payload: string) => {
-      if (!event || busyRef.current) return;
+      if (!event || busyRef.current || pausedRef.current) return;
       busyRef.current = true;
+      // Freeze the camera pipeline until the result overlay is dismissed.
+      pausedRef.current = true;
       setBusy(true);
       try {
         const res = await api.post<ScanResponse>('/scans', { eventId: event.id, payload });
         const scan = { ...res, at: new Date().toISOString(), key: Date.now() };
         feedback(VERDICT[res.result]);
-        setCurrent(scan);
-        setHistory((h) => [scan, ...h].slice(0, 30));
-        window.clearTimeout(clearTimer.current);
-        clearTimer.current = window.setTimeout(() => setCurrent(null), RESULT_MS);
+        showResult(scan);
       } catch (err) {
         feedback('bad');
-        window.clearTimeout(clearTimer.current);
-        setCurrent({
+        showResult({
           failed: true,
           valid: false,
           result: 'invalid',
@@ -153,11 +171,12 @@ const Scanner = () => {
         setBusy(false);
       }
     },
-    [event],
+    [event, showResult],
   );
 
   const onDetect = useCallback(
     (text: string) => {
+      if (pausedRef.current || busyRef.current) return;
       const now = Date.now();
       if (text === lastRef.current.text && now - lastRef.current.at < REPEAT_MS) return;
       lastRef.current = { text, at: now };
@@ -178,7 +197,7 @@ const Scanner = () => {
 
   const pickEvent = (id: string) => {
     setEventId(id);
-    setCurrent(null);
+    clearResult();
     setParams(id ? { event: id } : {}, { replace: true });
   };
 
@@ -259,6 +278,35 @@ const Scanner = () => {
                 </Button>
               </CameraOff>
             )}
+            {current && (
+              <ResultOverlay $verdict={VERDICT[current.result]} role="status" aria-live="assertive">
+                {current.result === 'valid' ? (
+                  <CheckCircle2 />
+                ) : current.result === 'already_used' ? (
+                  <AlertTriangle />
+                ) : (
+                  <XCircle />
+                )}
+                <h2>{current.failed ? 'SCAN FAILED' : HEADLINE[current.result]}</h2>
+                {current.guest && <h3>{current.guest.name}</h3>}
+                {current.guest && (
+                  <small>
+                    {current.guest.category}
+                    {current.guest.company && ` · ${current.guest.company}`} · {current.guest.ticketCode}
+                  </small>
+                )}
+                <p>{current.message}</p>
+                {current.result === 'already_used' && current.checkedInAt && (
+                  <p>
+                    First scanned {formatDateTime(current.checkedInAt)}
+                    {current.checkedInBy && ` by ${current.checkedInBy.name}`}
+                  </p>
+                )}
+                <Button size="sm" onClick={clearResult}>
+                  Next guest
+                </Button>
+              </ResultOverlay>
+            )}
           </Viewport>
           {cameraState === 'running' && (
             <Button variant="secondary" onClick={stopCamera}>
@@ -314,8 +362,8 @@ const Scanner = () => {
                   </strong>
                 </p>
               )}
-              <Button variant="secondary" size="sm" onClick={() => setCurrent(null)}>
-                Scan next
+              <Button variant="secondary" size="sm" onClick={clearResult}>
+                Next guest
               </Button>
             </ResultPanel>
           ) : (

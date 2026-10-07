@@ -68,6 +68,67 @@ export const Frame = styled.div`
   }
 `;
 
+const verdictColors = {
+  ok: ['#15803D', '#E7F6EC'],
+  warn: ['#B45309', '#FEF3E2'],
+  bad: ['#DC2626', '#FDECEC'],
+} as const;
+
+/** Full-bleed result over the camera so door staff always see Admit / Reject. */
+export const ResultOverlay = styled.div<{ $verdict: Verdict }>`
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: ${({ theme }) => theme.spacing.lg};
+  text-align: center;
+  animation: ${pop} 0.18s ease;
+  ${({ $verdict }) => css`
+    background: ${verdictColors[$verdict][0]};
+    color: #ffffff;
+  `}
+
+  > svg {
+    width: 72px;
+    height: 72px;
+    stroke-width: 2.25;
+  }
+
+  h2 {
+    font-size: clamp(1.75rem, 6vw, 2.25rem);
+    line-height: 1.15;
+    color: #ffffff;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+    color: #ffffff;
+  }
+
+  p,
+  small {
+    max-width: 320px;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: ${({ theme }) => theme.fontSizes.sm};
+  }
+
+  button {
+    margin-top: 10px;
+    background: #ffffff;
+    color: ${({ $verdict }) => verdictColors[$verdict][0]};
+    border-color: #ffffff;
+
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.92);
+      color: ${({ $verdict }) => verdictColors[$verdict][0]};
+    }
+  }
+`;
+
 export const CameraOff = styled.div`
   position: absolute;
   inset: 0;
@@ -91,12 +152,6 @@ export const CameraOff = styled.div`
     font-size: ${({ theme }) => theme.fontSizes.sm};
   }
 `;
-
-const verdictColors = {
-  ok: ['#15803D', '#E7F6EC'],
-  warn: ['#B45309', '#FEF3E2'],
-  bad: ['#DC2626', '#FDECEC'],
-} as const;
 
 export const ResultPanel = styled.div<{ $verdict: Verdict }>`
   display: flex;
